@@ -1,0 +1,61 @@
+{
+  "name": "codechecker",
+  "displayName": "CodeChecker",
+  "author": "Ericsson",
+  "description": "CodeChecker integration for Visual Studio Code",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ericsson/CodeCheckerVSCodePlugin"
+  },
+  "homepage": "https://github.com/Ericsson/CodeCheckerVSCodePlugin/tree/main/README.md",
+  "bugs": {
+    "url": "https://github.com/Ericsson/CodeCheckerVSCodePlugin/issues"
+  },
+  "license": "Apache-2.0",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.55.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:codechecker.helloWorld"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codechecker.helloWorld",
+        "title": "Hello World"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "yarn run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "test-compile": "tsc -p ./",
+    "test-watch": "tsc -watch -p ./",
+    "pretest": "yarn run test-compile && yarn run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.55.0",
+    "@types/glob": "^7.1.3",
+    "@types/mocha": "^8.0.4",
+    "@types/node": "^12.11.7",
+    "eslint": "^7.19.0",
+    "@typescript-eslint/eslint-plugin": "^4.14.1",
+    "@typescript-eslint/parser": "^4.14.1",
+    "glob": "^7.1.6",
+    "mocha": "^8.2.1",
+    "typescript": "^4.1.3",
+    "vscode-test": "^1.5.0",
+    "ts-loader": "^8.0.14",
+    "webpack": "^5.19.0",
+    "webpack-cli": "^4.4.0"
+  }
+}
