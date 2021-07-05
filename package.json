@@ -20,16 +20,46 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:codechecker.helloWorld"
+    "onCommand:codechecker.backend.reloadMetadata",
+    "onView:codechecker.views.overview"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "codechecker.helloWorld",
-        "title": "Hello World"
+        "command": "codechecker.backend.reloadMetadata",
+        "title": "CodeChecker: Reload metadata"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "CodeChecker",
+      "properties": {
+        "codechecker.backend.outputFolder": {
+          "type": "string",
+          "description": "Output folder for CodeChecker's analysis files",
+          "default": "${workspaceFolder}/.codechecker"
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codechecker",
+          "title": "CodeChecker",
+          "icon": "media/codechecker_logo.svg"
+        }
+      ]
+    },
+    "views": {
+      "codechecker": [
+        {
+          "id": "codechecker.views.overview",
+          "name": "Overview",
+          "icon": "media/codechecker_logo.svg",
+          "contextualTitle": "CodeChecker"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "yarn run package",
