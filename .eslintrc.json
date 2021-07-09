@@ -9,12 +9,20 @@
         "@typescript-eslint"
     ],
     "rules": {
-        "@typescript-eslint/naming-convention": "warn",
-        "@typescript-eslint/semi": "warn",
-        "curly": "warn",
-        "eqeqeq": "warn",
-        "no-throw-literal": "warn",
-        "semi": "off"
+        "@typescript-eslint/naming-convention": "error",
+        "@typescript-eslint/semi": "error",
+        "curly": "error",
+        "eqeqeq": "error",
+        "indent": ["error", 4],
+        "keyword-spacing": ["error"],
+        "max-len": ["error", { "code": 120 }],
+        "no-duplicate-imports": ["error", { "includeExports": true }],
+        "no-throw-literal": "error",
+        "object-curly-spacing": ["error", "always"],
+        "prefer-const": ["error"],
+        "semi": "off",
+        "sort-imports": ["error", { "ignoreDeclarationSort": true }],
+        "quotes": ["error", "single", { "avoidEscape": true }]
     },
     "ignorePatterns": [
         "**/*.d.ts"
