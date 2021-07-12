@@ -1,6 +1,17 @@
 import { TextDecoder } from 'util';
 import { Uri, workspace } from 'vscode';
-import { MetadataFile } from '../types';
+import { AnalyzerMetadata, CheckerMetadata, MetadataFile } from '../types';
+import { v1Types } from '../types/internal/metadata';
+
+export class MetadataParseError extends Error {
+    public code: string;
+
+    constructor(message: string) {
+        super(message);
+
+        this.code = 'UnsupportedVersion';
+    }
+}
 
 // TODO: Interruptible
 export async function parseMetadata(path: string): Promise<MetadataFile> {
@@ -8,5 +19,52 @@ export async function parseMetadata(path: string): Promise<MetadataFile> {
 
     const fileContents = new TextDecoder('utf-8').decode(rawFileContents);
 
-    return JSON.parse(fileContents) as MetadataFile;
+    let metadataFile = JSON.parse(fileContents);
+
+    if (!metadataFile.version) {
+        // Cherry-pick a test item
+        if (!metadataFile.result_source_files) {
+            throw new SyntaxError('required member not found');
+        }
+
+        // Convert v1 config files to v2
+        const v1 = metadataFile as v1Types.MetadataFile;
+
+        const v2Analyzers = Object.fromEntries(Object.entries(v1.analyzer_statistics)
+            .map(([name, stats]) => {
+                return [
+                    name,
+                    {
+                        checkers: v1.checkers[name] || {},
+                        analyzer_statistics: { // eslint-disable-line @typescript-eslint/naming-convention
+                            successful_sources: [], // eslint-disable-line @typescript-eslint/naming-convention
+                            ...stats
+                        }
+                    } as AnalyzerMetadata
+                ];
+            }));
+
+        const v2Metadata = {
+            ...v1,
+
+            // Remove unused vars
+            versions: undefined,
+            analyzer_statistics: undefined, // eslint-disable-line @typescript-eslint/naming-convention
+            checkers: undefined,
+
+            // Add v2-only vars
+            name: 'codechecker',
+            version: v1.versions['codechecker'] || 'Unknown',
+            analyzers: v2Analyzers
+        } as CheckerMetadata;
+
+        metadataFile = {
+            version: 2,
+            tools: [v2Metadata]
+        };
+    } else if (metadataFile.version !== 2) {
+        throw new MetadataParseError(`Version ${metadataFile.version} not supported`);
+    }
+
+    return metadataFile as MetadataFile;
 }

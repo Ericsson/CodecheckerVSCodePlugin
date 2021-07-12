@@ -137,11 +137,29 @@ export class MetadataApi implements Disposable {
         try {
             metadata = await parseMetadata(this.metadataPath!);
         } catch (err) {
+            switch (err.code) {
             // Silently ignore File not found errors
-            if (err.code !== 'FileNotFound') {
+            case 'FileNotFound':
+                break;
+
+            // For parse errors, print the message instead
+            case 'UnsupportedVersion':
                 console.error(err);
+                window.showErrorMessage(`Failed to read CodeChecker metadata: ${err.message}`);
+                break;
+
+            default:
+                console.error(err);
+
+                // File format errors
+                if (err instanceof SyntaxError) {
+                    window.showErrorMessage('Failed to read CodeChecker metadata: Invalid format');
+                    break;
+                }
+
+                // Misc. errors
                 window.showErrorMessage('Failed to read CodeChecker metadata\nCheck console for more details');
-                // Not returning, because the cache needs to be cleared
+                break;
             }
         }
 
