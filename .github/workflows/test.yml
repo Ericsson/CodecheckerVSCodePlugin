@@ -1,0 +1,15 @@
+name: codechecker-vscodeplugin-tests
+
+# Triggers the workflow on push or pull request events.
+on: [push, pull_request]
+
+jobs:
+  lint:
+    name: Linters
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      - name: Run tests
+        run: yarn run lint
