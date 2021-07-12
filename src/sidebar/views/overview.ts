@@ -1,3 +1,4 @@
+import { format } from 'node:path';
 import { Command, Event, EventEmitter, ExtensionContext, TreeDataProvider, TreeItem, TreeView, window } from 'vscode';
 import { ExtensionApi } from '../../backend/api';
 import { CheckerMetadata } from '../../backend/types';
@@ -24,10 +25,13 @@ export class OverviewView implements TreeDataProvider<string> {
         'loading': new OverviewItem('Loading overview, please wait...'),
 
         'notfound': new OverviewItem('CodeChecker run not found.'),
-        'notfound2': new OverviewItem('Run CodeChecker, reload metadata, or set the output folder to get started'),
+        'notfound2': new OverviewItem('Run CodeChecker, reload metadata,'),
+        'notfound3': new OverviewItem('or set the output folder to get started'),
 
-        'files': new OverviewItem(() => 'Files analyzed: ' + ExtensionApi.metadata.sourceFiles.size),
-        'lastRun': new OverviewItem(() => 'Last run on: ' + new Date(ExtensionApi.metadata.metadata!.timestamps.begin /* seconds */ * 1000).toLocaleString()),
+        'files': new OverviewItem(() => `Total files analyzed: ${ExtensionApi.metadata.sourceFiles.size}`),
+        'lastRun': new OverviewItem(() => `Last analysis run: ${
+            new Date(ExtensionApi.metadata.metadata!.timestamps.begin /* seconds */ * 1000).toLocaleString()
+        }`),
         'buildLength': new OverviewItem(() => {
             // Time in seconds
             const beginTime = ExtensionApi.metadata.metadata!.timestamps.begin;
@@ -41,17 +45,16 @@ export class OverviewView implements TreeDataProvider<string> {
 
             if (hours > 0 || minutes > 0) {
                 // H:MM:SS s / M:SS s
-                return 'Last run\'s length: ' + 
-                    (hours > 0 ? (hours + ':' + minutes.toString().padStart(2, '0')) : minutes) + ':' +
-                    seconds.toString().padStart(2, '0') + ' s';
+                const formattedMinutes = hours > 0 ? (`${hours}:${minutes.toString().padStart(2, '0')}`) : minutes;
+                return `Analysis duration: ${formattedMinutes}:${seconds.toString().padStart(2, '0')} s`;
             } else {
                 // S.fff s
-                return 'Last run\'s length: ' + 
-                    (seconds + ms / 1000).toFixed(3) + ' s';
+                return `Analysis duration: ${(seconds + ms / 1000).toFixed(3)} s`;
             }
         }),
-        'analyzers': new OverviewItem(() => 'Used analyzers: ' + 
-            Object.keys(ExtensionApi.metadata.metadata!.analyzers).join(', ')),
+        'analyzers': new OverviewItem(() => `Used analyzers: ${
+            Object.keys(ExtensionApi.metadata.metadata!.analyzers).join(', ')
+        }`),
 
         'separator': new OverviewItem('——'),
 
@@ -74,6 +77,7 @@ export class OverviewView implements TreeDataProvider<string> {
     private notFoundItemsList = [
         'notfound',
         'notfound2',
+        'notfound3',
 
         'separator',
 
