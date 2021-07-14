@@ -44,13 +44,9 @@ export async function parseMetadata(path: string): Promise<MetadataFile> {
                 ];
             }));
 
-        const v2Metadata = {
+        // FIXME: Define better types here
+        const v2Metadata: any = {
             ...v1,
-
-            // Remove unused vars
-            versions: undefined,
-            analyzer_statistics: undefined, // eslint-disable-line @typescript-eslint/naming-convention
-            checkers: undefined,
 
             // Add v2-only vars
             name: 'codechecker',
@@ -58,9 +54,14 @@ export async function parseMetadata(path: string): Promise<MetadataFile> {
             analyzers: v2Analyzers
         } as CheckerMetadata;
 
+        // Remove unused vars
+        delete v2Metadata.versions;
+        delete v2Metadata.analyzer_statistics; // eslint-disable-line @typescript-eslint/naming-convention
+        delete v2Metadata.checkers;
+
         metadataFile = {
             version: 2,
-            tools: [v2Metadata]
+            tools: [v2Metadata as CheckerMetadata]
         };
     } else if (metadataFile.version !== 2) {
         throw new MetadataParseError(`Version ${metadataFile.version} not supported`);
