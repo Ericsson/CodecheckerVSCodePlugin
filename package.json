@@ -72,6 +72,9 @@
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js"
   },
+  "dependencies": {
+    "fast-plist": "^0.1.2"
+  },
   "devDependencies": {
     "@types/vscode": "^1.55.0",
     "@types/glob": "^7.1.3",
