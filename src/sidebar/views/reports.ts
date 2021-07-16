@@ -50,6 +50,11 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
     }
 
     refreshBugList() {
+        // Hide the bug list when there's no metadata
+        if (!ExtensionApi.metadata.metadata) {
+            commands.executeCommand('setContext', 'codechecker.sidebar.showReports', false);
+        }
+
         this.currentFile = window.activeTextEditor?.document.uri;
 
         // Clear tree on file close
@@ -61,6 +66,8 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
 
         this.currentBugList = ExtensionApi.diagnostics.getFileDiagnostics(this.currentFile);
         this._onDidChangeTreeData.fire();
+
+        commands.executeCommand('setContext', 'codechecker.sidebar.showReports', true);
     }
 
     getChildren(element?: IssueMetadata): IssueMetadata[] | undefined {

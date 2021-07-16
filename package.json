@@ -59,10 +59,11 @@
           "contextualTitle": "CodeChecker"
         },
         {
-          "id": "codechecker.views.issues",
-          "name": "Issues in current file",
+          "id": "codechecker.views.reports",
+          "name": "Reports in current file",
           "icon": "media/codechecker_logo.svg",
-          "contextualTitle": "CodeChecker"
+          "contextualTitle": "CodeChecker",
+          "when": "codechecker.sidebar.showReports"
         }
       ]
     }
