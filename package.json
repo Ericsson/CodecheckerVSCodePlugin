@@ -57,6 +57,12 @@
           "name": "Overview",
           "icon": "media/codechecker_logo.svg",
           "contextualTitle": "CodeChecker"
+        },
+        {
+          "id": "codechecker.views.issues",
+          "name": "Issues in current file",
+          "icon": "media/codechecker_logo.svg",
+          "contextualTitle": "CodeChecker"
         }
       ]
     }
