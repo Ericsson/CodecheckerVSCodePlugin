@@ -21,7 +21,8 @@
   ],
   "activationEvents": [
     "onCommand:codechecker.backend.reloadMetadata",
-    "onView:codechecker.views.overview"
+    "onView:codechecker.views.overview",
+    "onFileSystem:file"
   ],
   "main": "./dist/extension.js",
   "contributes": {
