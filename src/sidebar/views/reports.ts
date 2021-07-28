@@ -1,3 +1,4 @@
+import { basename } from 'path';
 import {
     Command,
     Event,
@@ -15,15 +16,16 @@ import { ExtensionApi } from '../../backend/api';
 import { AnalysisPathEvent, AnalysisPathKind, DiagnosticEntry } from '../../backend/types';
 
 export interface IssueMetadata {
-    bugIndex?: number;
+    entryIndex?: number;
     reprStep?: number;
+    reprHasChildren?: boolean;
     description?: string;
     command?: Command;
 }
 
 export class ReportsView implements TreeDataProvider<IssueMetadata> {
     protected currentFile?: Uri;
-    protected currentBugList?: DiagnosticEntry[];
+    protected currentEntryList?: DiagnosticEntry[];
 
     protected tree?: TreeView<IssueMetadata>;
 
@@ -50,7 +52,7 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
     }
 
     refreshBugList() {
-        // Hide the bug list when there's no metadata
+        // Hide the report list when there's no metadata
         if (!ExtensionApi.metadata.metadata) {
             commands.executeCommand('setContext', 'codechecker.sidebar.showReports', false);
         }
@@ -59,12 +61,12 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
 
         // Clear tree on file close
         if (this.currentFile === undefined) {
-            this.currentBugList = [];
+            this.currentEntryList = [];
             this._onDidChangeTreeData.fire();
             return;
         }
 
-        this.currentBugList = ExtensionApi.diagnostics.getFileDiagnostics(this.currentFile);
+        this.currentEntryList = ExtensionApi.diagnostics.getFileDiagnostics(this.currentFile);
         this._onDidChangeTreeData.fire();
 
         commands.executeCommand('setContext', 'codechecker.sidebar.showReports', true);
@@ -76,7 +78,7 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
         };
 
         // Special case: No reports in current file
-        if ((this.currentBugList?.length ?? 0) === 0) {
+        if ((this.currentEntryList?.length ?? 0) === 0) {
             if (element === undefined) {
                 return [{ description: 'No reports found in file' }];
             }
@@ -84,18 +86,37 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
             return [];
         }
 
-        // First level, bug list
-        if (element?.bugIndex === undefined) {
-            const commands: IssueMetadata[] = [
-                { description: this.currentBugList!.length + ' reports found in file' },
-                { description: '——' }
+        // First level, report list
+        if (element?.entryIndex === undefined) {
+            const header: IssueMetadata[] = [
+                { description: this.currentEntryList!.length + ' reports found in file' }
             ];
 
-            const items = makeArray(this.currentBugList!.length, (idx): IssueMetadata => { 
-                return { bugIndex: idx };
-            });
+            const currentHeader: IssueMetadata[] = [
+                { description: '——' },
+                { description: 'In the current file:' }
+            ];
 
-            return commands.concat(items);
+            const currentItems = this.currentEntryList!
+                .map((entry, idx): [DiagnosticEntry, number] => [entry, idx])
+                .filter(([entry, _]) => entry.files[entry.location.file] === this.currentFile?.fsPath)
+                .map(([_, entryIndex]) => { return { entryIndex }; });
+
+            const relatedHeader: IssueMetadata[] = [
+                { description: '——' },
+                { description: 'In related files:' }
+            ];
+
+            const relatedItems = this.currentEntryList!
+                .map((entry, idx): [DiagnosticEntry, number] => [entry, idx])
+                .filter(([entry, _]) => entry.files[entry.location.file] !== this.currentFile?.fsPath)
+                .map(([_, entryIndex]) => { return { entryIndex }; });
+
+            return header
+                .concat(currentHeader)
+                .concat(currentItems)
+                .concat(relatedHeader)
+                .concat(relatedItems);
         }
 
         // Commands have no children
@@ -103,33 +124,63 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
             return [];
         }
 
+        const path = this.currentEntryList![element.entryIndex].path
+            .filter(pathElem => pathElem.kind === AnalysisPathKind.Event)
+            .map((pathElem, idx) => { return { idx, pathElem: pathElem as AnalysisPathEvent }; });
+
         // Second level, reproduction steps
         if (element.reprStep === undefined) {
             const commands: IssueMetadata[] = [
                 {
                     ...element,
-                    description: 'Jump to bug (no-op.)',
+                    description: 'Jump to report (no-op.)',
                     command: {
-                        title: 'jumpToBug',
-                        command: 'codechecker.editor.jumpToBug',
-                        arguments: [this.currentFile, element.bugIndex, true]
+                        title: 'jumpToReport',
+                        command: 'codechecker.editor.jumpToReport',
+                        arguments: [this.currentFile, element.entryIndex, true]
                     }
                 },
                 { ...element, description: '——' }
             ];
 
-            const items = makeArray(
-                this.currentBugList![element.bugIndex].path
-                    .filter(pathElem => pathElem.kind === AnalysisPathKind.Event).length,
-                (idx) => {
-                    return { ...element, reprStep: idx };
-                }
-            );
+            const items = path
+                .filter(({ pathElem }) => pathElem.depth === 0)
+                .map(({ idx }) => {
+                    return {
+                        ...element,
+                        reprStep: idx
+                    };
+                });
 
             return commands.concat(items);
         }
 
         // Third level, children of reproduction steps
+        // There are inner-depth children
+        if (
+            path[element.reprStep + 1] &&
+            path[element.reprStep + 1].pathElem.depth > path[element.reprStep].pathElem.depth
+        ) {
+            const children = path.slice(element.reprStep + 1);
+
+            const startingDepth = path[element.reprStep].pathElem.depth;
+            const childDepth = path[element.reprStep + 1].pathElem.depth;
+
+            const sameLevelIdx = children.findIndex(({ pathElem }) => pathElem.depth <= startingDepth);
+
+            const items = children.slice(0, sameLevelIdx)
+                .filter(({ pathElem }) => pathElem.depth <= childDepth)
+                .map(({ idx }) => {
+                    return {
+                        ...element,
+                        reprStep: idx
+                    };
+                });
+
+            return items;
+        }
+
+        // Third level, no inner-depth children
         return [];
     }
 
@@ -147,32 +198,50 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
         }
 
         // Invalid nodes, detect early
-        if (element.bugIndex === undefined) {
+        if (element.entryIndex === undefined) {
             console.error('Tried to add invalid node to CurrentFileReports tree:', element);
             return new TreeItem('Internal error - invalid node');
         }
 
-        // First level, bug list
+        // First level, report list
         if (element.reprStep === undefined) {
-            const currentBug = this.currentBugList![element.bugIndex];
+            const currentBug = this.currentEntryList![element.entryIndex];
+            const currentBugPath = currentBug.files[currentBug.location.file];
 
-            const item = new TreeItem(currentBug.description);
+            const fileDescription = currentBugPath === this.currentFile?.fsPath
+                ? `[L${currentBug.location.line}]`
+                : `[${basename(currentBugPath)}:${currentBug.location.line}]`;
+
+            const item = new TreeItem(`${fileDescription} - ${currentBug.description}`);
             item.collapsibleState = TreeItemCollapsibleState.Collapsed;
+            item.description = `(${currentBug.path.length})`;
+
+            if (currentBugPath !== this.currentFile?.fsPath) {
+                item.tooltip = `Full path to file: ${currentBugPath}`;
+            }
 
             return item;
         }
 
         // Second level, repr steps
-        const currentBug = this.currentBugList![element.bugIndex];
-        const currentStep = currentBug.path
-            .filter(pathElem => pathElem.kind === AnalysisPathKind.Event)[element.reprStep!] as AnalysisPathEvent;
+        const currentBug = this.currentEntryList![element.entryIndex];
+        const steps = currentBug.path
+            .filter(pathElem => pathElem.kind === AnalysisPathKind.Event) as AnalysisPathEvent[];
+        const currentStep = steps[element.reprStep];
 
-        const item = new TreeItem(currentStep.message);
-        item.tooltip = currentStep.extended_message;
+        const stepHasChildren = steps[element.reprStep + 1] && currentStep.depth < steps[element.reprStep + 1].depth;
+        const currentStepPath = currentBug.files[currentStep.location.file];
+        const currentStepFile = basename(currentStepPath);
+
+        const item = new TreeItem(
+            `${element.reprStep + 1}. [${currentStepFile}:${currentStep.location.line}] - ${currentStep.message}`
+        );
+        item.tooltip = `${currentStep.extended_message}\nFull path to file: ${currentStepPath}`;
+        item.collapsibleState = stepHasChildren ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.None;
         item.command = {
             title: 'jumpToStep',
             command: 'codechecker.editor.jumpToStep',
-            arguments: [this.currentFile, element.bugIndex, element.reprStep, true]
+            arguments: [this.currentFile, element.entryIndex, element.reprStep, true]
         };
 
         return item;

@@ -41,7 +41,7 @@ export class DiagnosticRenderer {
     // TODO: Implement CancellableToken
     updateAllDiagnostics(): void {
         const diagnosticMap: Map<string, Diagnostic[]> = new Map();
-    
+
         const makeRelatedInformation = (
             entry: DiagnosticEntry,
             location: AnalysisLocation,
@@ -71,7 +71,7 @@ export class DiagnosticRenderer {
                     end.line-1,
                     end.col,
                 ));
-                
+
             // FIXME: Find solution for multiple ranges with same error
             // Currently, when there's 2 or more ranges, they all contain a link to the location contained in the entry
             if (ranges.length > 1) {
@@ -91,7 +91,7 @@ export class DiagnosticRenderer {
 
                 diagnostics.push(finalDiag);
             }
-            
+
             diagnosticMap.set(affectedFile.toString(), diagnostics);
             return false;
         };
@@ -103,7 +103,7 @@ export class DiagnosticRenderer {
                     // render later, with the reproduction path
                     continue;
                 }
-    
+
                 const errorDiag = entry.path.find(elem =>
                     elem.kind === AnalysisPathKind.Event &&
                     (elem as AnalysisPathEvent).message === entry.description
@@ -155,20 +155,20 @@ export class DiagnosticRenderer {
                         );
                     }
                     relatedInformation.push(makeRelatedInformation(entry, errorDiag.location, 'original report'));
-                    
+
                     renderDiagnosticItem(entry, pathItem, DiagnosticSeverity.Information, relatedInformation);
                 }
             }
         };
 
-        
+
         // Update "regular" errors in files
         for (const uri of this._openedFiles) {
             if (!diagnosticMap.has(uri.toString())) {
                 diagnosticMap.set(uri.toString(), []);
             }
         }
-        
+
         const fileErrors = ExtensionApi.diagnostics.getMultipleFileDiagnostics(
             this._openedFiles.filter(uri => ExtensionApi.diagnostics.dataExistsForFile(uri))
         );
