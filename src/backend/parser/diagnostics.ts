@@ -6,9 +6,7 @@ import { DiagnosticFile } from '../types';
 export async function parseDiagnostics(path: string): Promise<DiagnosticFile> {
 
     const rawFileContents = await workspace.fs.readFile(Uri.file(path));
-
     const fileContents = new TextDecoder('utf-8').decode(rawFileContents);
-
     const parsedContents = FastPlist.parse(fileContents);
 
     // Use the files 

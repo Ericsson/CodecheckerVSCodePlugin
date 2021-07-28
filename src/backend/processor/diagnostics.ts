@@ -22,6 +22,43 @@ export class DiagnosticsApi {
      */
     private _diagnosticEntries: Map<string, DiagnosticFile> = new Map();
 
+    private _selectedEntry?: {
+        file: string,
+        idx: number
+    };
+    public get selectedEntry(): {
+        position: {readonly file: string, readonly idx: number},
+        diagnostic: DiagnosticEntry
+    } | undefined {
+        if (this._selectedEntry) {
+            const activeFile = this._diagnosticEntries.get(this._selectedEntry.file);
+            const diagnostic = activeFile?.diagnostics[this._selectedEntry.idx];
+
+            if (diagnostic) {
+                return {
+                    position: this._selectedEntry!,
+                    diagnostic
+                };
+            }
+        }
+
+        return undefined;
+    }
+
+    public setActiveReport(position: {file: string, idx: number} | undefined) {
+        if (position) {
+            const activeFile = this._diagnosticEntries.get(position.file);
+            const diagnostic = activeFile?.diagnostics[position.idx];
+
+            if (diagnostic) {
+                this._selectedEntry = position;
+                return;
+            }
+        }
+
+        this._selectedEntry = undefined;
+    }
+
     constructor(ctx: ExtensionContext) {
         ctx.subscriptions.push(this._diagnosticsUpdated = new EventEmitter());
         window.onDidChangeVisibleTextEditors(this.onDocumentsChanged, this, ctx.subscriptions);
@@ -47,7 +84,11 @@ export class DiagnosticsApi {
     // TODO: Add support for cancellation tokens
     async reloadDiagnosticsAsync(forceReload?: boolean): Promise<void> {
         // TODO: Allow loading all diagnostics at once
-        const plistFilesToLoad = this._openedFiles.map(file => ExtensionApi.metadata.sourceFiles.get(file) || []);
+        const plistFilesToLoad = this._openedFiles.flatMap(file => ExtensionApi.metadata.sourceFiles.get(file) || []);
+
+        if (this._selectedEntry) {
+            plistFilesToLoad.push(this._selectedEntry.file);
+        }
 
         const loadedPlistFiles = new Set<string>();
         const newEntries = forceReload
@@ -58,28 +99,26 @@ export class DiagnosticsApi {
         let plistErrors = false;
 
         // Load new .plist files
-        for (const plistFiles of plistFilesToLoad) {
-            for (const plistFile of plistFiles!) {
-                if (newEntries.has(plistFile)) {
-                    loadedPlistFiles.add(plistFile);
-                    continue;
-                }
+        for (const plistFile of plistFilesToLoad) {
+            if (newEntries.has(plistFile)) {
+                loadedPlistFiles.add(plistFile);
+                continue;
+            }
 
-                try {
-                    const diagnosticEntry = await parseDiagnostics(plistFile);
-                    newEntries.set(plistFile, diagnosticEntry);
-                    loadedPlistFiles.add(plistFile);
-                } catch (err) {
-                    switch (err.code) {
-                    // Silently ignore file-related errors
-                    case 'FileNotFound':
-                    case 'Unavailable':
-                        break;
+            try {
+                const diagnosticEntry = await parseDiagnostics(plistFile);
+                newEntries.set(plistFile, diagnosticEntry);
+                loadedPlistFiles.add(plistFile);
+            } catch (err) {
+                switch (err.code) {
+                // Silently ignore file-related errors
+                case 'FileNotFound':
+                case 'Unavailable':
+                    break;
 
-                    default:
-                        console.error(err);
-                        plistErrors = true;
-                    }
+                default:
+                    console.error(err);
+                    plistErrors = true;
                 }
             }
         }
@@ -103,8 +142,10 @@ export class DiagnosticsApi {
             }
         }
 
+        this._selectedEntry = undefined;
         this._diagnosticEntries = newEntries;
         this._diagnosticSourceFiles = newSourceFiles;
+
         this._diagnosticsUpdated.fire();
     }
 
