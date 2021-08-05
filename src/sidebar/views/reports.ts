@@ -73,10 +73,6 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
     }
 
     getChildren(element?: IssueMetadata): IssueMetadata[] | undefined {
-        const makeArray = <T>(length: number, func: (idx: number) => T): T[] => {
-            return Array.from(Array(length), (_, idx) => func(idx));
-        };
-
         // Special case: No reports in current file
         if ((this.currentEntryList?.length ?? 0) === 0) {
             if (element === undefined) {
@@ -133,7 +129,7 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
             const commands: IssueMetadata[] = [
                 {
                     ...element,
-                    description: 'Jump to report (no-op.)',
+                    description: 'Jump to report',
                     command: {
                         title: 'jumpToReport',
                         command: 'codechecker.editor.jumpToReport',
