@@ -88,6 +88,21 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
                 { description: this.currentEntryList!.length + ' reports found in file' }
             ];
 
+            let selectedHeader: IssueMetadata[] = [];
+
+            if (ExtensionApi.diagnostics.selectedEntry) {
+                selectedHeader = [
+                    {
+                        description: 'Hide active reproduction steps',
+                        command: {
+                            title: 'toggleSteps',
+                            command: 'codechecker.editor.toggleSteps',
+                            arguments: [this.currentFile, -1, false]
+                        }
+                    }
+                ];
+            }
+
             const currentHeader: IssueMetadata[] = [
                 { description: '——' },
                 { description: 'In the current file:' }
@@ -109,6 +124,7 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
                 .map(([_, entryIndex]) => { return { entryIndex }; });
 
             return header
+                .concat(selectedHeader)
                 .concat(currentHeader)
                 .concat(currentItems)
                 .concat(relatedHeader)
@@ -126,6 +142,9 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
 
         // Second level, reproduction steps
         if (element.reprStep === undefined) {
+            const selectedPosition = ExtensionApi.diagnostics.selectedEntry?.position;
+            const isActiveReport = selectedPosition?.idx === element.entryIndex;
+
             const commands: IssueMetadata[] = [
                 {
                     ...element,
@@ -134,6 +153,15 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
                         title: 'jumpToReport',
                         command: 'codechecker.editor.jumpToReport',
                         arguments: [this.currentFile, element.entryIndex, true]
+                    }
+                },
+                {
+                    ...element,
+                    description: `${isActiveReport ? 'Hide' : 'Show'} reproduction steps`,
+                    command: {
+                        title: 'toggleSteps',
+                        command: 'codechecker.editor.toggleSteps',
+                        arguments: [this.currentFile, element.entryIndex]
                     }
                 },
                 { ...element, description: '——' }

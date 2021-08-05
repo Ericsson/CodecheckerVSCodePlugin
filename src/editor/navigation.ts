@@ -1,11 +1,29 @@
-import { ExtensionContext, Position, Range, Uri, commands, window } from 'vscode';
+import { ExtensionContext, Range, Uri, commands, window } from 'vscode';
 import { ExtensionApi } from '../backend/api';
 import { AnalysisPathEvent, AnalysisPathKind, DiagnosticEntry } from '../backend/types';
 
 export class NavigationHandler {
     constructor(ctx: ExtensionContext) {
+        ctx.subscriptions.push(commands.registerCommand('codechecker.editor.toggleSteps', this.toggleSteps, this));
         ctx.subscriptions.push(commands.registerCommand('codechecker.editor.jumpToReport', this.jumpToReport, this));
         ctx.subscriptions.push(commands.registerCommand('codechecker.editor.jumpToStep', this.jumpToStep, this));
+    }
+
+    toggleSteps(file: Uri | string, diagnosticIdx: number, targetState?: boolean) {
+        if (typeof file === 'string') {
+            file = Uri.file(file);
+        }
+
+        const diagnostic = ExtensionApi.diagnostics.getFileDiagnostics(file)[diagnosticIdx] ?? [];
+
+        // If the target state isn't given, replace the active report, or clear if it's the same
+        targetState = targetState ?? (diagnostic !== ExtensionApi.diagnostics.selectedEntry?.diagnostic);
+
+        if (targetState) {
+            ExtensionApi.diagnostics.setSelectedEntry({ file: file.fsPath, idx: diagnosticIdx });
+        } else {
+            ExtensionApi.diagnostics.setSelectedEntry();
+        }
     }
 
     jumpToReport(file: Uri | string, diagnosticIndex: number) {
