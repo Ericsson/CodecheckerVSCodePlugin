@@ -199,34 +199,34 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
             return new TreeItem('Internal error - invalid node');
         }
 
+        const currentReport = this.currentEntryList![element.entryIndex];
+
         // First level, report list
         if (element.reprStep === undefined) {
-            const currentBug = this.currentEntryList![element.entryIndex];
-            const currentBugPath = currentBug.files[currentBug.location.file];
+            const currentReportPath = currentReport.files[currentReport.location.file];
 
-            const fileDescription = currentBugPath === this.currentFile?.fsPath
-                ? `[L${currentBug.location.line}]`
-                : `[${basename(currentBugPath)}:${currentBug.location.line}]`;
+            const fileDescription = currentReportPath === this.currentFile?.fsPath
+                ? `[L${currentReport.location.line}]`
+                : `[${basename(currentReportPath)}:${currentReport.location.line}]`;
 
-            const item = new TreeItem(`${fileDescription} - ${currentBug.description}`);
+            const item = new TreeItem(`${fileDescription} - ${currentReport.description}`);
             item.collapsibleState = TreeItemCollapsibleState.Collapsed;
-            item.description = `(${currentBug.path.length})`;
+            item.description = `(${currentReport.path.length})`;
 
-            if (currentBugPath !== this.currentFile?.fsPath) {
-                item.tooltip = `Full path to file: ${currentBugPath}`;
+            if (currentReportPath !== this.currentFile?.fsPath) {
+                item.tooltip = `Full path to file: ${currentReportPath}`;
             }
 
             return item;
         }
 
         // Second level, repr steps
-        const currentBug = this.currentEntryList![element.entryIndex];
-        const steps = currentBug.path
+        const steps = currentReport.path
             .filter(pathElem => pathElem.kind === AnalysisPathKind.Event) as AnalysisPathEvent[];
         const currentStep = steps[element.reprStep];
 
         const stepHasChildren = steps[element.reprStep + 1] && currentStep.depth < steps[element.reprStep + 1].depth;
-        const currentStepPath = currentBug.files[currentStep.location.file];
+        const currentStepPath = currentReport.files[currentStep.location.file];
         const currentStepFile = basename(currentStepPath);
 
         const item = new TreeItem(
