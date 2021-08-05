@@ -147,7 +147,10 @@ export class DiagnosticsApi {
             }
         }
 
-        this._selectedEntry = undefined;
+        if (forceReload) {
+            this._selectedEntry = undefined;
+        }
+
         this._diagnosticEntries = newEntries;
         this._diagnosticSourceFiles = newSourceFiles;
 
