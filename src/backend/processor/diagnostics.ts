@@ -74,17 +74,18 @@ export class DiagnosticsApi {
         this.onDocumentsChanged(window.visibleTextEditors);
     }
 
-    /** Prefer calling ``reloadDiagnosticsAsync`` in an async context */
-    reloadDiagnostics(forceReload?: boolean) {
-        this.reloadDiagnosticsAsync(forceReload)
-            .catch((err) => {
-                console.error(err);
-                window.showErrorMessage('Unexpected error when reloading diagnostics \nCheck console for more details');
-            });
+    // Logs errors to the user, and always resolves.
+    async reloadDiagnosticsSafe(forceReload?: boolean): Promise<void> {
+        try {
+            this.reloadDiagnostics(forceReload);
+        } catch (err) {
+            console.error(err);
+            window.showErrorMessage('Unexpected error when reloading reports\nCheck console for more details');
+        }
     }
 
     // TODO: Add support for cancellation tokens
-    async reloadDiagnosticsAsync(forceReload?: boolean): Promise<void> {
+    async reloadDiagnostics(forceReload?: boolean): Promise<void> {
         // TODO: Allow loading all diagnostics at once
         const plistFilesToLoad = this._openedFiles.flatMap(file => ExtensionApi.metadata.sourceFiles.get(file) || []);
 
@@ -119,6 +120,7 @@ export class DiagnosticsApi {
                     break;
 
                 default:
+                    console.error(`Failed to read file ${plistFile}`);
                     console.error(err);
                     plistErrors = true;
                 }
@@ -189,10 +191,10 @@ export class DiagnosticsApi {
     private onDocumentsChanged(event: TextEditor[]): void {
         this._openedFiles = event.map(editor => editor.document.uri.fsPath);
 
-        this.reloadDiagnostics();
+        this.reloadDiagnosticsSafe();
     }
 
     private onMetadataUpdated(metadata: CheckerMetadata | undefined) {
-        this.reloadDiagnostics(true);
+        this.reloadDiagnosticsSafe(true);
     }
 }
