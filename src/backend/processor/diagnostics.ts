@@ -31,8 +31,8 @@ export class DiagnosticsApi {
         diagnostic: DiagnosticEntry
     } | undefined {
         if (this._selectedEntry) {
-            const activeFile = this._diagnosticEntries.get(this._selectedEntry.file);
-            const diagnostic = activeFile?.diagnostics[this._selectedEntry.idx];
+            const activeFile = this.getFileDiagnostics(Uri.file(this._selectedEntry.file)) ?? [];
+            const diagnostic = activeFile[this._selectedEntry.idx];
 
             if (diagnostic) {
                 return {
@@ -45,18 +45,20 @@ export class DiagnosticsApi {
         return undefined;
     }
 
-    public setActiveReport(position: {file: string, idx: number} | undefined) {
+    public setSelectedEntry(position?: {file: string, idx: number}) {
         if (position) {
-            const activeFile = this._diagnosticEntries.get(position.file);
-            const diagnostic = activeFile?.diagnostics[position.idx];
+            const activeFile = this.getFileDiagnostics(Uri.file(position.file)) ?? [];
+            const diagnostic = activeFile[position.idx];
 
             if (diagnostic) {
                 this._selectedEntry = position;
+                this._diagnosticsUpdated.fire();
                 return;
             }
         }
 
         this._selectedEntry = undefined;
+        this._diagnosticsUpdated.fire();
     }
 
     constructor(ctx: ExtensionContext) {
