@@ -87,10 +87,11 @@ export class DiagnosticsApi {
     // TODO: Add support for cancellation tokens
     async reloadDiagnostics(forceReload?: boolean): Promise<void> {
         // TODO: Allow loading all diagnostics at once
-        const plistFilesToLoad = this._openedFiles.flatMap(file => ExtensionApi.metadata.sourceFiles.get(file) || []);
+        const plistFilesToLoad = this._openedFiles.flatMap(file => ExtensionApi.metadata.sourceFiles.get(file) ?? []);
 
         if (this._selectedEntry) {
-            plistFilesToLoad.push(this._selectedEntry.file);
+            const selectedPlistFiles = ExtensionApi.metadata.sourceFiles.get(this._selectedEntry.file) ?? [];
+            plistFilesToLoad.push(...selectedPlistFiles);
         }
 
         const loadedPlistFiles = new Set<string>();
