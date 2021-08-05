@@ -30,6 +30,14 @@
       {
         "command": "codechecker.backend.reloadMetadata",
         "title": "CodeChecker: Reload metadata"
+      },
+      {
+        "command": "codechecker.editor.nextStep",
+        "title": "CodeChecker: Next reproduction step"
+      },
+      {
+        "command": "codechecker.editor.previousStep",
+        "title": "CodeChecker: Previous reproduction step"
       }
     ],
     "configuration": {
@@ -42,6 +50,20 @@
         }
       }
     },
+    "keybindings": [
+      {
+        "command": "codechecker.editor.nextStep",
+        "key": "ctrl-f7",
+        "mac": "cmd-f7",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "codechecker.editor.previousStep",
+        "key": "ctrl-shift-f7",
+        "mac": "cmd-shift-f7",
+        "when": "editorTextFocus"
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
