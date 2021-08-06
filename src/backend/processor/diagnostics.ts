@@ -77,7 +77,7 @@ export class DiagnosticsApi {
     // Logs errors to the user, and always resolves.
     async reloadDiagnosticsSafe(forceReload?: boolean): Promise<void> {
         try {
-            this.reloadDiagnostics(forceReload);
+            await this.reloadDiagnostics(forceReload);
         } catch (err) {
             console.error(err);
             window.showErrorMessage('Unexpected error when reloading reports\nCheck console for more details');
