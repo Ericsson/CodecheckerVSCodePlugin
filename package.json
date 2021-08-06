@@ -21,7 +21,8 @@
   ],
   "activationEvents": [
     "onCommand:codechecker.backend.reloadMetadata",
-    "onView:codechecker.views.overview"
+    "onView:codechecker.views.overview",
+    "onFileSystem:file"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -29,6 +30,14 @@
       {
         "command": "codechecker.backend.reloadMetadata",
         "title": "CodeChecker: Reload metadata"
+      },
+      {
+        "command": "codechecker.editor.nextStep",
+        "title": "CodeChecker: Next reproduction step"
+      },
+      {
+        "command": "codechecker.editor.previousStep",
+        "title": "CodeChecker: Previous reproduction step"
       }
     ],
     "configuration": {
@@ -41,6 +50,20 @@
         }
       }
     },
+    "keybindings": [
+      {
+        "command": "codechecker.editor.nextStep",
+        "key": "ctrl-f7",
+        "mac": "cmd-f7",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "codechecker.editor.previousStep",
+        "key": "ctrl-shift-f7",
+        "mac": "cmd-shift-f7",
+        "when": "editorTextFocus"
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -57,6 +80,13 @@
           "name": "Overview",
           "icon": "media/codechecker_logo.svg",
           "contextualTitle": "CodeChecker"
+        },
+        {
+          "id": "codechecker.views.reports",
+          "name": "Reports in current file",
+          "icon": "media/codechecker_logo.svg",
+          "contextualTitle": "CodeChecker",
+          "when": "codechecker.sidebar.showReports"
         }
       ]
     }
@@ -71,6 +101,9 @@
     "pretest": "yarn run test-compile && yarn run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js"
+  },
+  "dependencies": {
+    "fast-plist": "^0.1.2"
   },
   "devDependencies": {
     "@types/vscode": "^1.55.0",

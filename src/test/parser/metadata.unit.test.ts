@@ -62,7 +62,7 @@ suite('Unit Test: Metadata Parser', () => {
 
         await testAndExpectCode('not_found.json', 'FileNotFound');
         await testAndExpectCode('invalid_version.json', 'UnsupportedVersion');
-        
+
         await testAndExpectSyntaxError('empty.json');
         await testAndExpectSyntaxError('invalid_members.json');
         await testAndExpectSyntaxError('json_error.txt'); // .txt to avoid misleading syntax error in VSCode

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>clang_version</key>
+	<string>clang version 6.0.0-1ubuntu2 (tags/RELEASE_600/final)</string>
+	<key>diagnostics</key>
+	<array>
+		<dict>
+			<key>category</key>
+			<string>Dead store</string>
+			<key>check_name</key>
+			<string>deadcode.DeadStores</string>
+			<key>description</key>
+			<string>Value stored to '__b' during its initialization is never read</string>
+			<key>issue_context</key>
+			<string>clear</string>
+			<key>issue_context_kind</key>
+			<string>C++ method</string>
+			<key>issue_hash_content_of_line_in_context</key>
+			<string>890f61293b984671c6bf407dbbf4352a</string>
+			<key>issue_hash_function_offset</key>
+			<string>1</string>
+			<key>location</key>
+			<dict>
+				<key>col</key>
+				<integer>20</integer>
+				<key>file</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>199</integer>
+			</dict>
+			<key>path</key>
+			<array>
+				<dict>
+					<key>depth</key>
+					<integer>0</integer>
+					<key>extended_message</key>
+					<string>Value stored to '__b' during its initialization is never read</string>
+					<key>kind</key>
+					<string>event</string>
+					<key>location</key>
+					<dict>
+						<key>col</key>
+						<integer>20</integer>
+						<key>file</key>
+						<integer>0</integer>
+						<key>line</key>
+						<integer>199</integer>
+					</dict>
+					<key>message</key>
+					<string>Value stored to '__b' during its initialization is never read</string>
+					<key>ranges</key>
+					<array>
+						<array>
+							<dict>
+								<key>col</key>
+								<integer>20</integer>
+								<key>file</key>
+								<integer>0</integer>
+								<key>line</key>
+								<integer>199</integer>
+							</dict>
+							<dict>
+								<key>col</key>
+								<integer>22</integer>
+								<key>file</key>
+								<integer>0</integer>
+								<key>line</key>
+								<integer>199</integer>
+							</dict>
+						</array>
+						<array>
+							<dict>
+								<key>col</key>
+								<integer>26</integer>
+								<key>file</key>
+								<integer>0</integer>
+								<key>line</key>
+								<integer>199</integer>
+							</dict>
+							<dict>
+								<key>col</key>
+								<integer>50</integer>
+								<key>file</key>
+								<integer>0</integer>
+								<key>line</key>
+								<integer>199</integer>
+							</dict>
+						</array>
+					</array>
+				</dict>
+			</array>
+			<key>type</key>
+			<string>Dead initialization</string>
+		</dict>
+	</array>
+	<key>files</key>
+	<array>
+		<string>/usr/include/c++/7/bits/atomic_base.h</string>
+	</array>
+</dict>
+</plist>

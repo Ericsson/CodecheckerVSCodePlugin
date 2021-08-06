@@ -1,2 +1,2 @@
 export * from './diagnostics';
-export * from './metadata';
+export * from './editor';

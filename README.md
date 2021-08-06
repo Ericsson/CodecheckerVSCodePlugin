@@ -11,7 +11,7 @@ This is a C/C++ code analysis plugin for VSCode that shows bugs detected by the 
 1. [Install CodeChecker](https://github.com/Ericsson/CodeChecker#install-guide).
 2. [Install the CodeChecker extension for Visual Studio Code](https://github.com/Ericsson/CodeCheckerVSCodePlugin/releases).
 3. [Run a CodeChecker analysis on your project](https://github.com/Ericsson/codechecker/blob/master/docs/usage.md).
-4. Open your project, and browse through the found issues!
+4. Open your project, and browse through the found reports!
 
 ## Features
 
@@ -24,6 +24,9 @@ The extension provides the following commands:
 
 * Reload Metadata: Reloads CodeChecker's `metadata.json` file.
   * `codechecker.backend.reloadMetadata`
+* Next/Previous Step: Moves between a displayed reproduction path's steps.
+  * `codechecker.backend.nextStep`, `codechecker.backend.previousStep`
+  * Default: `Ctrl-F7`, `Ctrl-Shift-F7` respectively
 
 ## Settings
 
