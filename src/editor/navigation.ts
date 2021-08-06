@@ -67,6 +67,9 @@ export class NavigationHandler {
             : diagnosticLocation !== undefined ? Uri.file(diagnostic.files[diagnosticLocation.file])
                 : file;
 
+        // Show the reproduction path on jumping to a step, to enable navigation.
+        this.toggleSteps(file, bugIndex, true);
+
         window.showTextDocument(targetFile, {
             selection: stepLocation !== undefined ? new Range(
                 stepLocation.line - 1,
