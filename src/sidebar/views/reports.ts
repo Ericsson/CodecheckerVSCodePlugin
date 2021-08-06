@@ -73,10 +73,17 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
     }
 
     getChildren(element?: IssueMetadata): IssueMetadata[] | undefined {
-        // Special case: No reports in current file
-        if ((this.currentEntryList?.length ?? 0) === 0) {
+        // Special case: No file selected
+        if (!this.currentFile) {
             if (element === undefined) {
-                return [{ description: 'No reports found in file' }];
+                return [{ description: 'No file selected' }];
+            }
+
+            return [];
+        // Special case: No reports in current file
+        } else if ((this.currentEntryList?.length ?? 0) === 0) {
+            if (element === undefined) {
+                return [{ description: `No reports found in file ${basename(this.currentFile.fsPath)}` }];
             }
 
             return [];
@@ -84,8 +91,12 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
 
         // First level, report list
         if (element?.entryIndex === undefined) {
+            const reportsText = this.currentEntryList!.length === 1
+                ? '1 report'
+                : `${this.currentEntryList!.length} reports`;
+
             const header: IssueMetadata[] = [
-                { description: this.currentEntryList!.length + ' reports found in file' }
+                { description: `${reportsText} found in file ${basename(this.currentFile!.fsPath)}` }
             ];
 
             let selectedHeader: IssueMetadata[] = [];
