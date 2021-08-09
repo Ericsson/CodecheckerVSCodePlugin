@@ -58,7 +58,7 @@ export class OverviewView implements TreeDataProvider<string> {
         'separator': new OverviewItem('——'),
 
         'reloadMetadata': new OverviewItem('Reload CodeChecker metadata', {
-            title: 'reloadMetadata', 
+            title: 'reloadMetadata',
             command: 'codechecker.backend.reloadMetadata',
         }),
     };

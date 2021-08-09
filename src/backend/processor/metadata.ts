@@ -25,8 +25,8 @@ export class MetadataApi implements Disposable {
     private metadataWatchDisposables: Disposable[] = [];
 
     private _metadataSourceFiles: Map<string, string[]> = new Map();
-    /** 
-     * Content based on the metadata file only.  
+    /**
+     * Content based on the metadata file only.
      * Key: Source code file, value: .plist analysis files
      */
     public get sourceFiles(): ReadonlyMap<string, string[]> {

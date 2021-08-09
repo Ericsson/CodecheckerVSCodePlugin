@@ -18,6 +18,7 @@
         "max-len": ["error", { "code": 120 }],
         "no-duplicate-imports": ["error", { "includeExports": true }],
         "no-throw-literal": "error",
+        "no-trailing-spaces": "error",
         "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
         "object-curly-spacing": ["error", "always"],
         "prefer-const": ["error"],
