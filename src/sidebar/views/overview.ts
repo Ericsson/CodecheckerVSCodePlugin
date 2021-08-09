@@ -1,4 +1,3 @@
-import { format } from 'node:path';
 import { Command, Event, EventEmitter, ExtensionContext, TreeDataProvider, TreeItem, TreeView, window } from 'vscode';
 import { ExtensionApi } from '../../backend/api';
 import { CheckerMetadata } from '../../backend/types';
@@ -59,7 +58,7 @@ export class OverviewView implements TreeDataProvider<string> {
         'separator': new OverviewItem('——'),
 
         'reloadMetadata': new OverviewItem('Reload CodeChecker metadata', {
-            title: 'reloadMetadata', 
+            title: 'reloadMetadata',
             command: 'codechecker.backend.reloadMetadata',
         }),
     };

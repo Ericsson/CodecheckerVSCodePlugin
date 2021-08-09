@@ -9,7 +9,7 @@ export async function parseDiagnostics(path: string): Promise<DiagnosticFile> {
     const fileContents = new TextDecoder('utf-8').decode(rawFileContents);
     const parsedContents = FastPlist.parse(fileContents);
 
-    // Use the files 
+    // Use the files.
     for (const diagnostic of parsedContents.diagnostics) {
         diagnostic.files = parsedContents.files;
     }

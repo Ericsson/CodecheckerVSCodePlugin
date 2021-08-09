@@ -4,13 +4,13 @@ import { CheckerMetadata, DiagnosticEntry, DiagnosticFile } from '../types';
 import { ExtensionApi } from '../api';
 
 /**
- * API interface that provides Diagnostics data.  
+ * API interface that provides Diagnostics data.
  * Access the active instance via ExtensionApi.
  */
 export class DiagnosticsApi {
     private _openedFiles: string[] = [];
 
-    /** 
+    /**
      * Content based on the contents of loaded .plist files.
      * Key: Source code file, value: .plist analysis files
      */
@@ -198,7 +198,7 @@ export class DiagnosticsApi {
         this.reloadDiagnosticsSafe();
     }
 
-    private onMetadataUpdated(metadata: CheckerMetadata | undefined) {
+    private onMetadataUpdated(_metadata: CheckerMetadata | undefined) {
         this.reloadDiagnosticsSafe(true);
     }
 }
