@@ -1,4 +1,3 @@
-import { format } from 'node:path';
 import { Command, Event, EventEmitter, ExtensionContext, TreeDataProvider, TreeItem, TreeView, window } from 'vscode';
 import { ExtensionApi } from '../../backend/api';
 import { CheckerMetadata } from '../../backend/types';

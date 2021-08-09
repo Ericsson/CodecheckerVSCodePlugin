@@ -198,7 +198,7 @@ export class DiagnosticsApi {
         this.reloadDiagnosticsSafe();
     }
 
-    private onMetadataUpdated(metadata: CheckerMetadata | undefined) {
+    private onMetadataUpdated(_metadata: CheckerMetadata | undefined) {
         this.reloadDiagnosticsSafe(true);
     }
 }
