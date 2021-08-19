@@ -73,8 +73,8 @@ export class MetadataApi implements Disposable {
 
         this.metadataPath = workspace.getConfiguration('codechecker.backend').get<string>('outputFolder');
 
-        if (this.metadataPath) {
-            const workspaceFolder = workspace.workspaceFolders![0].uri.fsPath;
+        if (this.metadataPath && workspace.workspaceFolders?.length) {
+            const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
 
             // Substitute basic variables into the folder path
             this.metadataPath = this.metadataPath
