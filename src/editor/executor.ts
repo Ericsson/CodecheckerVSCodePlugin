@@ -4,8 +4,10 @@ import {
     ProgressLocation,
     StatusBarAlignment,
     StatusBarItem,
+    commands,
     window
 } from 'vscode';
+import { Editor } from '.';
 import { ExtensionApi } from '../backend';
 import { ProcessStatus } from '../backend/executor/process';
 
@@ -15,6 +17,9 @@ export class ExecutorAlerts {
 
     constructor(ctx: ExtensionContext) {
         ctx.subscriptions.push(this.statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left));
+        ctx.subscriptions.push(
+            commands.registerCommand('codechecker.executor.showCommandLine', this.printCmdLine, this)
+        );
 
         ExtensionApi.executorProcess.processStatusChange(this.onStatusChange, this, ctx.subscriptions);
 
@@ -25,6 +30,16 @@ export class ExecutorAlerts {
         this.statusBarItem.text = 'CodeChecker: not running';
         this.statusBarItem.command = { title: '', command: 'codechecker.executor.stopAnalysis' };
         this.statusBarItem.show();
+    }
+
+    printCmdLine() {
+        const commandLine = ExtensionApi.executorProcess.getProcessCmdLine();
+        Editor.loggerPanel.window.appendLine('>>> Full command line:');
+        Editor.loggerPanel.window.appendLine(`>>> ${commandLine}`);
+
+        // Hack to force focus on the output window
+        Editor.loggerPanel.window.hide();
+        Editor.loggerPanel.window.show(false);
     }
 
     onStatusChange(status: ProcessStatus) {

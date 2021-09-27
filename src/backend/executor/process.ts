@@ -54,17 +54,14 @@ export class ExecutorProcess {
         }
     }
 
-    /**
-     * If the arguments are empty, the entire project is analyzed
-     */
-    public startProcess(...files: Uri[]) {
+    public getProcessCmdLine(...files: Uri[]): string {
         if (this.activeProcess !== undefined) {
-            return;
+            // TODO: Better error handling
+            return '';
         }
 
         if (!workspace.workspaceFolders?.length) {
-            // Silently ignore the call - user will be warned via other modules
-            return;
+            return '';
         }
 
         const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
@@ -90,7 +87,7 @@ export class ExecutorProcess {
             ? `--file ${files.map((uri) => `"${uri.fsPath}"`).join(' ')}`
             : '';
 
-        const commandLine = [
+        return [
             `${ccPath} analyze`,
             `"${ccCompileCmd}"`,
             `--output "${ccFolder}"`,
@@ -98,6 +95,22 @@ export class ExecutorProcess {
             `${ccArguments}`,
             `${filePaths}`,
         ].join(' ');
+    }
+
+    /**
+     * If the arguments are empty, the entire project is analyzed
+     */
+    public startProcess(...files: Uri[]) {
+        if (this.activeProcess !== undefined) {
+            return;
+        }
+
+        if (!workspace.workspaceFolders?.length) {
+            // Silently ignore the call - user will be warned via other modules
+            return;
+        }
+
+        const commandLine = this.getProcessCmdLine(...files);
 
         this._processStdout.fire(`> ${commandLine}\n`);
         this.activeProcess = child_process.spawn(commandLine, { shell: true });
