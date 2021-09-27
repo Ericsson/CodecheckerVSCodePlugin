@@ -61,6 +61,14 @@ export class OverviewView implements TreeDataProvider<string> {
             title: 'reloadMetadata',
             command: 'codechecker.backend.reloadMetadata',
         }),
+        'analyzeCurrentFile': new OverviewItem('Re-analyze current file', {
+            title: 'reloadMetadata',
+            command: 'codechecker.executor.analyzeCurrentFile',
+        }),
+        'analyzeProject': new OverviewItem('Re-analyze entire project', {
+            title: 'reloadMetadata',
+            command: 'codechecker.executor.analyzeProject',
+        }),
     };
 
     private regularItemsList = [
@@ -72,6 +80,8 @@ export class OverviewView implements TreeDataProvider<string> {
         'separator',
 
         'reloadMetadata',
+        'analyzeCurrentFile',
+        'analyzeProject',
     ];
     private notFoundItemsList = [
         'notfound',
