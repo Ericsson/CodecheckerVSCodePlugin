@@ -27,6 +27,29 @@ The extension provides the following commands:
 * Next/Previous Step: Moves between a displayed reproduction path's steps.
   * `codechecker.backend.nextStep`, `codechecker.backend.previousStep`
   * Default: `Ctrl-F7`, `Ctrl-Shift-F7` respectively
+* Analyze current file: Analyzes the currently opened source file using CodeChecker.
+  * `codechecker.executor.analyzeCurrentFile`
+* Analyze selected files...: Analyzes the files selected by the user, using CodeChecker.
+  * Accepts multiple files as input.
+  * `codechecker.executor.analyzeSelectedFiles`
+* Analyze entire project: Analyzes the entire project using CodeChecker.
+  * `codechecker.executor.analyzeProject`
+* Show full command line: Shows the full CodeChecker command line, used to analyze files.
+  * `codechecker.executor.showCommandLine`
+* Reload Metadata: Reloads CodeChecker's `metadata.json` file.
+  * `codechecker.backend.reloadMetadata`
+* Stop analysis: Stops the currently running analysis.
+  Partial results are saved and updated.
+  * `codechecker.executor.stopAnalysis`
+
+The analysis commands are also available in task form:
+* Analyze current file
+  * `type: "CodeChecker", taskType: ""`
+* Analyze selected files
+  * Selected files are given in the `selectedFiles` array, using full path.
+  * `type: "CodeChecker", taskType: "selectedFiles", selectedFiles: []`
+* Analyze entire project
+  * `type: "CodeChecker", taskType: "project"`
 
 ## Settings
 
@@ -34,6 +57,15 @@ Since CodeChecker-related paths vary greatly between systems, the following sett
 
 * Output folder: The output folder where the CodeChecker analysis files are stored.
   * `codechecker.backend.outputFolder`, default value: `${workspaceFolder}/.codechecker`
+* Executable path: Path to the CodeChecker executable. (Can be an executable in the PATH.)
+  * `codechecker.executor.executablePath`, default value: `codechecker`
+* Arguments: Additional arguments to CodeChecker.
+  The command `CodeChecker: Show full command line` shows the resulting command line.
+  * `codechecker.executor.arguments`, default value: *(empty)*
+* Thread count: CodeChecker's thread count - leave empty to use all threads.
+  * `codechecker.executor.threadCount`, default value: *(empty)*
+* Run on save: Controls auto-run of CodeChecker on saving a file.
+  * `codechecker.executor.runOnSave`, default value: `on`
 
 ## Development
 

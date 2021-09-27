@@ -13,12 +13,22 @@ export enum ProcessStatus {
 export class ExecutorProcess {
     activeProcess?: child_process.ChildProcess;
 
+    /** Every line should have a newline at the end */
     private _processStdout: EventEmitter<string> = new EventEmitter();
+    /**
+     * Standard output of the process.
+     *
+     * Also contains other metadata:
+     * * ``> command`` for each executed command,
+     * * ``>>> metadata`` for other information, eg. when a process is finished.
+     */
     public get processStdout(): Event<string> {
         return this._processStdout.event;
     }
 
+    /** Every line should have a newline at the end */
     private _processStderr: EventEmitter<string> = new EventEmitter();
+    /** Standard error of the process. */
     public get processStderr(): Event<string> {
         return this._processStderr.event;
     }
