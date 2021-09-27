@@ -91,6 +91,8 @@ export class OverviewView implements TreeDataProvider<string> {
         'separator',
 
         'reloadMetadata',
+        'analyzeCurrentFile',
+        'analyzeProject',
     ];
     private itemsList: string[];
 
