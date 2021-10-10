@@ -20,6 +20,9 @@ export class ExecutorAlerts {
         ctx.subscriptions.push(
             commands.registerCommand('codechecker.executor.showCommandLine', this.printCmdLine, this)
         );
+        ctx.subscriptions.push(
+            commands.registerCommand('codechecker.backend.focusLogs', this.focusLogs, this)
+        );
 
         ExtensionApi.executorProcess.processStatusChange(this.onStatusChange, this, ctx.subscriptions);
 
@@ -28,8 +31,13 @@ export class ExecutorAlerts {
 
     init() {
         this.statusBarItem.text = 'CodeChecker: not running';
-        this.statusBarItem.command = { title: '', command: 'codechecker.executor.stopAnalysis' };
+        this.statusBarItem.command = { title: '', command: 'codechecker.backend.focusLogs' };
         this.statusBarItem.show();
+    }
+
+    focusLogs() {
+        Editor.loggerPanel.window.hide();
+        Editor.loggerPanel.window.show(false);
     }
 
     printCmdLine() {
@@ -37,32 +45,37 @@ export class ExecutorAlerts {
         Editor.loggerPanel.window.appendLine('>>> Full command line:');
         Editor.loggerPanel.window.appendLine(`>>> ${commandLine}`);
 
-        // Hack to force focus on the output window
-        Editor.loggerPanel.window.hide();
-        Editor.loggerPanel.window.show(false);
+        this.focusLogs();
     }
 
     onStatusChange(status: ProcessStatus) {
-        switch (status) {
-        case ProcessStatus.running:
+        if (status === ProcessStatus.running) {
             this.showAlert('CodeChecker: analysis in progress...');
             this.statusBarItem.text = 'CodeChecker: analysis in progress...';
             this.statusBarItem.show();
-            break;
+            return;
+        }
+
+        switch (status) {
         case ProcessStatus.finished:
+            this.statusBarItem.text = 'CodeChecker: analysis finished';
+            break;
         case ProcessStatus.killed:
+            this.statusBarItem.text = 'CodeChecker: analysis killed';
+            break;
         case ProcessStatus.notRunning:
-            this.hideAlert();
-            this.statusBarItem.text = 'CodeChecker: not running';
-            this.statusBarItem.show();
+            this.statusBarItem.text = 'CodeChecker: ready';
             break;
         case ProcessStatus.errored:
-            this.hideAlert();
-            this.statusBarItem.text = 'CodeChecker: last run errored';
-            this.statusBarItem.show();
+            this.statusBarItem.text = 'CodeChecker: analysis errored';
             window.showErrorMessage('CodeChecker finished with error - see logs for details');
             break;
+        default:
+            break;
         }
+
+        this.hideAlert();
+        this.statusBarItem.show();
     }
 
     showAlert(message: string) {
