@@ -1,6 +1,7 @@
 import * as child_process from 'child_process';
+import * as fs from 'fs';
 import * as path from 'path';
-import { Event, EventEmitter, ExtensionContext, Uri, workspace } from 'vscode';
+import { Event, EventEmitter, ExtensionContext, Uri, window, workspace } from 'vscode';
 
 export enum ProcessStatus {
     notRunning,
@@ -64,14 +65,14 @@ export class ExecutorProcess {
         }
     }
 
-    public getProcessCmdLine(...files: Uri[]): string {
+    public getProcessCmdLine(...files: Uri[]): string | undefined {
         if (this.activeProcess !== undefined) {
             // TODO: Better error handling
-            return '';
+            return undefined;
         }
 
         if (!workspace.workspaceFolders?.length) {
-            return '';
+            return undefined;
         }
 
         const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
@@ -89,9 +90,31 @@ export class ExecutorProcess {
             ?? 'CodeChecker';
         const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
             ?? path.join(workspaceFolder, '.codechecker');
-        const ccCompileCmd = path.join(ccFolder, 'compile_cmd.json');
         const ccArguments = getConfigAndReplaceVariables('codechecker.executor', 'arguments') ?? '';
         const ccThreads = workspace.getConfiguration('codechecker.executor').get<string>('threadCount');
+
+        const compileCmdPaths = [
+            path.join(ccFolder, 'compile_commands.json'),
+            path.join(ccFolder, 'compile_cmd.json')
+        ];
+        let ccCompileCmd: string | undefined;
+
+        for (const filePath of compileCmdPaths) {
+            if (fs.existsSync(filePath)) {
+                ccCompileCmd = filePath;
+                break;
+            }
+        }
+
+        if (ccCompileCmd === undefined) {
+            this._processStderr.fire('>>> No database found in the following paths:\n');
+            for (const filePath of compileCmdPaths) {
+                this._processStderr.fire(`>>>   ${filePath}\n`);
+            }
+
+            window.showWarningMessage('No compilation database found, CodeChecker not started - see logs for details');
+            return undefined;
+        }
 
         const filePaths = files.length
             ? `--file ${files.map((uri) => `"${uri.fsPath}"`).join(' ')}`
@@ -121,6 +144,10 @@ export class ExecutorProcess {
         }
 
         const commandLine = this.getProcessCmdLine(...files);
+
+        if (commandLine === undefined) {
+            return;
+        }
 
         this._processStdout.fire(`> ${commandLine}\n`);
         this.activeProcess = child_process.spawn(commandLine, { shell: true });
