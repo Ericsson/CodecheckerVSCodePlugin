@@ -18,6 +18,14 @@ This is a C/C++ code analysis plugin for VSCode that shows bugs detected by the 
 This is an early development version, and features are constantly being added.  
 Once a core set of features is implemented, this section will be populated!
 
+## Automatic CodeChecker analysis
+
+The extension supports *automatic analysis* of changed files. When you save a file, or use one of the `CodeChecker: Analyze` commands, CodeChecker starts an analysis in the background. You can *stop the analysis* by clicking the *Cancel* button on CodeChecker's notification - partial results are saved automatically.
+
+The analysis is fully configurable, and the resulting CodeChecker command line can be previewed with the `CodeChecker: Show full command line` command (for supported arguments, run `CodeChecker analyze --help`). Automatic analysis on saving can be configured as well.
+
+You can view the output of previous CodeChecker analyses by clicking CodeChecker in the status bar, or using the `CodeChecker: Show Output` command.
+
 ## Commands and tasks
 
 The extension provides the following commands:
@@ -59,10 +67,11 @@ Since CodeChecker-related paths vary greatly between systems, the following sett
 
 * Output folder: The output folder where the CodeChecker analysis files are stored.
   * `codechecker.backend.outputFolder`, default value: `${workspaceFolder}/.codechecker`
-* Executable path: Path to the CodeChecker executable. (Can be an executable in the PATH.)
-  * `codechecker.executor.executablePath`, default value: `codechecker`
+* Executable path: Path to the CodeChecker executable (can be an executable in the `PATH` environment variable).
+  * `codechecker.executor.executablePath`, default value: `CodeChecker`
 * Arguments: Additional arguments to CodeChecker.
-  The command `CodeChecker: Show full command line` shows the resulting command line.
+  * The command `CodeChecker: Show full command line` shows the resulting command line.
+  * For supported arguments, run `CodeChecker analyze --help`.
   * `codechecker.executor.arguments`, default value: *(empty)*
 * Thread count: CodeChecker's thread count - leave empty to use all threads.
   * `codechecker.executor.threadCount`, default value: *(empty)*

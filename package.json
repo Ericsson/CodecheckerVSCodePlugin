@@ -79,7 +79,7 @@
         },
         "codechecker.executor.arguments": {
           "type": "string",
-          "description": "Additional arguments to CodeChecker. `CodeChecker: Show full command line` command shows the resulting command line.",
+          "description": "Additional arguments to CodeChecker. For supported arguments, run `CodeChecker analyze --help`. The command `CodeChecker: Show full command line` command shows the resulting command line.",
           "default": ""
         },
         "codechecker.executor.threadCount": {
