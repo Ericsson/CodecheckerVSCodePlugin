@@ -56,6 +56,10 @@
         "title": "CodeChecker: Show full command line"
       },
       {
+        "command": "codechecker.logging.showOutput",
+        "title": "CodeChecker: Show Output"
+      },
+      {
         "command": "codechecker.executor.stopAnalysis",
         "title": "CodeChecker: Stop analysis"
       }

@@ -36,6 +36,8 @@ The extension provides the following commands:
   * `codechecker.executor.analyzeProject`
 * Show full command line: Shows the full CodeChecker command line, used to analyze files.
   * `codechecker.executor.showCommandLine`
+* Show Output: Focuses CodeChecker's output in the editor.
+  * `codechecker.logging.showOutput`
 * Reload Metadata: Reloads CodeChecker's `metadata.json` file.
   * `codechecker.backend.reloadMetadata`
 * Stop analysis: Stops the currently running analysis.

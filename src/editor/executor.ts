@@ -20,9 +20,6 @@ export class ExecutorAlerts {
         ctx.subscriptions.push(
             commands.registerCommand('codechecker.executor.showCommandLine', this.printCmdLine, this)
         );
-        ctx.subscriptions.push(
-            commands.registerCommand('codechecker.backend.focusLogs', this.focusLogs, this)
-        );
 
         ExtensionApi.executorProcess.processStatusChange(this.onStatusChange, this, ctx.subscriptions);
 
@@ -31,13 +28,8 @@ export class ExecutorAlerts {
 
     init() {
         this.statusBarItem.text = 'CodeChecker: not running';
-        this.statusBarItem.command = { title: '', command: 'codechecker.backend.focusLogs' };
+        this.statusBarItem.command = { title: '', command: 'codechecker.logging.showOutput' };
         this.statusBarItem.show();
-    }
-
-    focusLogs() {
-        Editor.loggerPanel.window.hide();
-        Editor.loggerPanel.window.show(false);
     }
 
     printCmdLine() {
@@ -45,7 +37,7 @@ export class ExecutorAlerts {
         Editor.loggerPanel.window.appendLine('>>> Full command line:');
         Editor.loggerPanel.window.appendLine(`>>> ${commandLine}`);
 
-        this.focusLogs();
+        Editor.loggerPanel.showOutputTab();
     }
 
     onStatusChange(status: ProcessStatus) {
