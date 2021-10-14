@@ -56,7 +56,17 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
         const metadataExists = ExtensionApi.metadata.metadata !== undefined;
         commands.executeCommand('setContext', 'codechecker.sidebar.showReports', metadataExists);
 
-        this.currentFile = window.activeTextEditor?.document.uri;
+        const activeUri = window.activeTextEditor?.document.uri;
+
+        // Handle Code's Output tab
+        if (activeUri?.scheme === 'output') {
+            // Only clear currentFile if it was closed
+            if (window.visibleTextEditors.every((editor) => editor.document.uri.fsPath !== this.currentFile?.fsPath)) {
+                this.currentFile = undefined;
+            }
+        } else {
+            this.currentFile = activeUri;
+        }
 
         // Clear tree on file close
         if (this.currentFile === undefined) {
