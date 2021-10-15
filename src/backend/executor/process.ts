@@ -165,10 +165,18 @@ export class ExecutorProcess {
             this._processStdout.fire(`>>> Process errored: ${err.message}\n`);
             this.updateStatus(ProcessStatus.errored);
         });
-        this.activeProcess.on('exit', () => {
-            // FIXME: Errored process checking
-            this._processStdout.fire('>>> Process exited\n');
-            this.updateStatus(ProcessStatus.finished);
+        this.activeProcess.on('exit', (code: number | null) => {
+            this._processStdout.fire(`>>> Process exited with code ${code ?? 0}\n`);
+
+            switch (code) {
+            case null:
+            case 0:
+                this.updateStatus(ProcessStatus.finished);
+                break;
+            default:
+                this.updateStatus(ProcessStatus.errored);
+                break;
+            }
         });
 
         this.updateStatus(ProcessStatus.running);
