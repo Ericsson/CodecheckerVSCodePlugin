@@ -18,22 +18,48 @@ This is a C/C++ code analysis plugin for VSCode that shows bugs detected by the 
 This is an early development version, and features are constantly being added.  
 Once a core set of features is implemented, this section will be populated!
 
+## Automatic CodeChecker analysis
+
+The extension supports *automatic analysis* of changed files. When you save a file, or use one of the `CodeChecker: Analyze` commands, CodeChecker starts an analysis in the background. You can *stop the analysis* by clicking the *Cancel* button on CodeChecker's notification - partial results are saved automatically.
+
+The analysis is fully configurable, and the resulting CodeChecker command line can be previewed with the `CodeChecker: Show full command line` command (for supported arguments, run `CodeChecker analyze --help`). Automatic analysis on saving can be configured as well.
+
+You can view the output of previous CodeChecker analyses by clicking CodeChecker in the status bar, or using the `CodeChecker: Show Output` command.
+
 ## Commands and tasks
 
 The extension provides the following commands:
 
-* Reload Metadata: Reloads CodeChecker's `metadata.json` file.
-  * `codechecker.backend.reloadMetadata`
-* Next/Previous Step: Moves between a displayed reproduction path's steps.
-  * `codechecker.backend.nextStep`, `codechecker.backend.previousStep`
-  * Default: `Ctrl-F7`, `Ctrl-Shift-F7` respectively
+| Command | Description |
+| --- | --- |
+| `CodeChecker: Analyze current file` | Analyzes the currently opened source file using CodeChecker. Can also be called by clicking on the `Re-analyze current file` button in CodeChecker's side panel. <br> Useful when the `Run On Save` is turned off in the plugin's settings. |
+| `CodeChecker: Analyze selected files...` | Analyzes the files selected by the user, using CodeChecker. Accepts multiple files as input. |
+| `CodeChecker: Analyze entire project` | Analyzes the entire project using CodeChecker. Can also be called by clicking on the `Re-analyze entire project` button in CodeChecker's side panel.<br> *Warning:* A full analysis can take minutes, or even hours on larger projects. |
+| `CodeChecker: Stop analysis` | Stops the currently running analysis. Partial results are saved and updated. |
+| `CodeChecker: Next reproduction step`, <br> `CodeChecker: Previous reproduction step` | Moves between a displayed reproduction path's steps. You can also navigate directly to a report's step via CodeChecker's side panel. <br> Default keybinds: `Ctrl-F7`, `Ctrl-Shift-F7` respectively. |
+| `CodeChecker: Show full command line` | Shows the full CodeChecker command line used to analyze files. <br> Useful if you want to review the analyzer's options before running, or if you want to run the analysis manually. |
+| `CodeChecker: Show Output` | Focuses CodeChecker's output in the editor. The plugin's logs, as well as the output of previous CodeChecker runs are displayed here. |
+| `CodeChecker: Reload metadata` | Reloads CodeChecker's `metadata.json` file. Can also be called by clicking on the `Reload CodeChecker metadata` button on the CodeChecker's side panel. |
+
+
+The analysis commands are also available in task form:
+| **Task** | **Equivalent command** |
+| --- | --- |
+| `{ type: "CodeChecker", taskType: "currentFile" }` | `CodeChecker: Analyze current file` |
+| `{ type: "CodeChecker", taskType: "selectedFiles", selectedFiles: [] }` | `CodeChecker: Analyze selected files...` <br> Selected files are listed in the `selectedFiles` array, using full paths. |
+| `{ type: "CodeChecker", taskType: "project" }` | `CodeChecker: Analyze entire project` |
 
 ## Settings
 
 Since CodeChecker-related paths vary greatly between systems, the following settings are provided, accessible through the Settings menu:
 
-* Output folder: The output folder where the CodeChecker analysis files are stored.
-  * `codechecker.backend.outputFolder`, default value: `${workspaceFolder}/.codechecker`
+| Name | Description |
+| --- | --- |
+| CodeChecker > Backend > Output folder <br> (default: `${workspaceFolder}/.codechecker`) | The output folder where the CodeChecker analysis files are stored. |
+| CodeChecker > Executor > Executable path <br> (default: `CodeChecker`) |  Path to the CodeChecker executable (can be an executable in the `PATH` environment variable). |
+| CodeChecker > Executor > Thread count <br> (default: *(empty)*) | CodeChecker's thread count - leave empty to use all threads. |
+| CodeChecker > Executor > Arguments <br> (default: *(empty)*) | Additional arguments to CodeChecker. For supported arguments, run `CodeChecker analyze --help`. <br> *Note:* The resulting command-line can be previewed with the command `CodeChecker: Show full command line`. |
+| CodeChecker > Executor > Run on save <br> (default: `on`) | Controls auto-run of CodeChecker on saving a file. |
 
 ## Development
 

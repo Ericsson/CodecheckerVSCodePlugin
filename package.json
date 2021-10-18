@@ -38,6 +38,30 @@
       {
         "command": "codechecker.editor.previousStep",
         "title": "CodeChecker: Previous reproduction step"
+      },
+      {
+        "command": "codechecker.executor.analyzeCurrentFile",
+        "title": "CodeChecker: Analyze current file"
+      },
+      {
+        "command": "codechecker.executor.analyzeSelectedFiles",
+        "title": "CodeChecker: Analyze selected files..."
+      },
+      {
+        "command": "codechecker.executor.analyzeProject",
+        "title": "CodeChecker: Analyze entire project"
+      },
+      {
+        "command": "codechecker.executor.showCommandLine",
+        "title": "CodeChecker: Show full command line"
+      },
+      {
+        "command": "codechecker.logging.showOutput",
+        "title": "CodeChecker: Show Output"
+      },
+      {
+        "command": "codechecker.executor.stopAnalysis",
+        "title": "CodeChecker: Stop analysis"
       }
     ],
     "configuration": {
@@ -47,6 +71,30 @@
           "type": "string",
           "description": "Output folder for CodeChecker's analysis files",
           "default": "${workspaceFolder}/.codechecker"
+        },
+        "codechecker.executor.executablePath": {
+          "type": "string",
+          "description": "Path to CodeChecker's executable",
+          "default": "CodeChecker"
+        },
+        "codechecker.executor.arguments": {
+          "type": "string",
+          "description": "Additional arguments to CodeChecker. For supported arguments, run `CodeChecker analyze --help`. The command `CodeChecker: Show full command line` command shows the resulting command line.",
+          "default": ""
+        },
+        "codechecker.executor.threadCount": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "CodeChecker's thread count - leave empty to use all threads",
+          "default": null,
+          "minimum": 1
+        },
+        "codechecker.executor.runOnSave": {
+          "type": "boolean",
+          "description": "Controls auto-run of CodeChecker on save",
+          "default": true
         }
       }
     },
@@ -62,6 +110,29 @@
         "key": "ctrl-shift-f7",
         "mac": "cmd-shift-f7",
         "when": "editorTextFocus"
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "CodeChecker",
+        "required": [
+          "taskType"
+        ],
+        "properties": {
+          "taskType": {
+            "type": "string",
+            "description": "The type of the CodeChecker task",
+            "enum": [
+              "project",
+              "currentFile",
+              "selectedFiles"
+            ]
+          },
+          "selectedFiles": {
+            "type": "array",
+            "description": "When using type `selectedFiles`, analyze the selected files."
+          }
+        }
       }
     ],
     "viewsContainers": {
