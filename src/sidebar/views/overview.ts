@@ -57,6 +57,10 @@ export class OverviewView implements TreeDataProvider<string> {
 
         'separator': new OverviewItem('——'),
 
+        'quickSetup': new OverviewItem('Show database setup dialog', {
+            title: 'showSetupDialog',
+            command: 'codechecker.editor.showSetupDialog'
+        }),
         'reloadMetadata': new OverviewItem('Reload CodeChecker metadata', {
             title: 'reloadMetadata',
             command: 'codechecker.backend.reloadMetadata',
@@ -90,6 +94,7 @@ export class OverviewView implements TreeDataProvider<string> {
 
         'separator',
 
+        'quickSetup',
         'reloadMetadata',
         'analyzeCurrentFile',
         'analyzeProject',

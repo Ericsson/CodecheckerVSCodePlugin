@@ -102,7 +102,7 @@ export class ExecutorProcess {
             if (filePath) {
                 this._processStderr.fire(`>>>   ${filePath}\n`);
             } else {
-                this._processStderr.fire('>>>   <no path set in settings>');
+                this._processStderr.fire('>>>   <no path set in settings>\n');
             }
         }
 

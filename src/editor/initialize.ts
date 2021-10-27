@@ -14,23 +14,23 @@ export class FolderInitializer {
             ExtensionApi.executorProcess.getCompileCommandsPath() === undefined &&
             workspace.getConfiguration('codechecker.editor').get('showDatabaseDialog') !== false
         ) {
-            this.showDialog();
+            await this.showDialog();
         }
     }
 
     async showDialog() {
+        const workspaceFolder = workspace.workspaceFolders?.length && workspace.workspaceFolders[0].uri;
+
+        if (!workspaceFolder) {
+            return;
+        }
+
         const choice = await window.showInformationMessage(
             'compile_commands.json was not found in the CodeChecker folder. How would you like to proceed?',
             'Run CodeChecker log',
             'Locate',
             'Don\'t show again'
         );
-
-        const workspaceFolder = workspace.workspaceFolders?.length && workspace.workspaceFolders[0].uri;
-
-        if (!workspaceFolder) {
-            return;
-        }
 
         const getConfigAndReplaceVariables = (category: string, name: string): string | undefined => {
             const configValue = workspace.getConfiguration(category).get<string>(name);
@@ -48,15 +48,10 @@ export class FolderInitializer {
 
         switch (choice) {
         case 'Run CodeChecker log':
-            const cmdLine = ExtensionApi.executorProcess.getLogCmdLine();
-            if (cmdLine === undefined) {
-                break;
-            }
-
             await workspace.fs.createDirectory(codeCheckerFolder);
 
             const terminal = window.createTerminal('CodeChecker');
-            terminal.sendText(cmdLine, false);
+            terminal.sendText(ExtensionApi.executorProcess.getLogCmdLine()!, false);
             terminal.show(false);
 
             return;
@@ -66,7 +61,7 @@ export class FolderInitializer {
                 break;
             }
 
-            workspace.getConfiguration('codechecker.backend').update('databasePath', filePath);
+            workspace.getConfiguration('codechecker.backend').update('databasePath', filePath[0].fsPath);
             return;
         case 'Don\'t show again':
             workspace.getConfiguration('codechecker.editor').update('showDatabaseDialog', false);
