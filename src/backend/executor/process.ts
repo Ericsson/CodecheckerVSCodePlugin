@@ -65,12 +65,51 @@ export class ExecutorProcess {
         }
     }
 
-    public getProcessCmdLine(...files: Uri[]): string | undefined {
-        if (this.activeProcess !== undefined) {
-            // TODO: Better error handling
+    public getCompileCommandsPath() {
+        if (!workspace.workspaceFolders?.length) {
             return undefined;
         }
 
+        const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
+
+        const getConfigAndReplaceVariables = (category: string, name: string): string | undefined => {
+            const configValue = workspace.getConfiguration(category).get<string>(name);
+            return configValue
+                ?.replace(/\${workspaceRoot}/g, workspaceFolder)
+                .replace(/\${workspaceFolder}/g, workspaceFolder)
+                .replace(/\${cwd}/g, process.cwd())
+                .replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => process.env[envName] ?? '');
+        };
+
+        const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
+            ?? path.join(workspaceFolder, '.codechecker');
+
+        const compileCmdPaths = [
+            getConfigAndReplaceVariables('codechecker.backend', 'databasePath'),
+            path.join(ccFolder, 'compile_commands.json'),
+            path.join(ccFolder, 'compile_cmd.json')
+        ];
+
+        for (const filePath of compileCmdPaths) {
+            if (filePath && fs.existsSync(filePath)) {
+                this._processStderr.fire(`>>> Database found at path: ${filePath}\n`);
+                return filePath;
+            }
+        }
+
+        this._processStderr.fire('>>> No database found in the following paths:\n');
+        for (const filePath of compileCmdPaths) {
+            if (filePath) {
+                this._processStderr.fire(`>>>   ${filePath}\n`);
+            } else {
+                this._processStderr.fire('>>>   <no path set in settings>');
+            }
+        }
+
+        return undefined;
+    }
+
+    public getProcessCmdLine(...files: Uri[]): string | undefined {
         if (!workspace.workspaceFolders?.length) {
             return undefined;
         }
@@ -93,25 +132,9 @@ export class ExecutorProcess {
         const ccArguments = getConfigAndReplaceVariables('codechecker.executor', 'arguments') ?? '';
         const ccThreads = workspace.getConfiguration('codechecker.executor').get<string>('threadCount');
 
-        const compileCmdPaths = [
-            path.join(ccFolder, 'compile_commands.json'),
-            path.join(ccFolder, 'compile_cmd.json')
-        ];
-        let ccCompileCmd: string | undefined;
-
-        for (const filePath of compileCmdPaths) {
-            if (fs.existsSync(filePath)) {
-                ccCompileCmd = filePath;
-                break;
-            }
-        }
+        const ccCompileCmd = this.getCompileCommandsPath();
 
         if (ccCompileCmd === undefined) {
-            this._processStderr.fire('>>> No database found in the following paths:\n');
-            for (const filePath of compileCmdPaths) {
-                this._processStderr.fire(`>>>   ${filePath}\n`);
-            }
-
             window.showWarningMessage('No compilation database found, CodeChecker not started - see logs for details');
             return undefined;
         }
@@ -127,6 +150,37 @@ export class ExecutorProcess {
             `${ccThreads ? '-j ' + ccThreads : ''}`,
             `${ccArguments}`,
             `${filePaths}`,
+        ].join(' ');
+    }
+
+    public getLogCmdLine(): string | undefined {
+        if (!workspace.workspaceFolders?.length) {
+            return undefined;
+        }
+
+        const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
+
+        const getConfigAndReplaceVariables = (category: string, name: string): string | undefined => {
+            const configValue = workspace.getConfiguration(category).get<string>(name);
+            return configValue
+                ?.replace(/\${workspaceRoot}/g, workspaceFolder)
+                .replace(/\${workspaceFolder}/g, workspaceFolder)
+                .replace(/\${cwd}/g, process.cwd())
+                .replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => process.env[envName] ?? '');
+        };
+
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath')
+            ?? 'CodeChecker';
+        const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
+            ?? path.join(workspaceFolder, '.codechecker');
+
+        // Use a predefined path here
+        const ccCompileCmd = path.join(ccFolder, 'compile_commands.json');
+
+        return [
+            `${ccPath} log`,
+            `--output "${ccCompileCmd}"`,
+            '--build "make"'
         ].join(' ');
     }
 

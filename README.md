@@ -36,6 +36,7 @@ The extension provides the following commands:
 | `CodeChecker: Analyze selected files...` | Analyzes the files selected by the user, using CodeChecker. Accepts multiple files as input. |
 | `CodeChecker: Analyze entire project` | Analyzes the entire project using CodeChecker. Can also be called by clicking on the `Re-analyze entire project` button in CodeChecker's side panel.<br> *Warning:* A full analysis can take minutes, or even hours on larger projects. |
 | `CodeChecker: Stop analysis` | Stops the currently running analysis. Partial results are saved and updated. |
+| `CodeChecker: Show database setup dialog` | Shows the dialog to select the path to an existing compilation database, or to create a new one. |
 | `CodeChecker: Next reproduction step`, <br> `CodeChecker: Previous reproduction step` | Moves between a displayed reproduction path's steps. You can also navigate directly to a report's step via CodeChecker's side panel. <br> Default keybinds: `Ctrl-F7`, `Ctrl-Shift-F7` respectively. |
 | `CodeChecker: Show full command line` | Shows the full CodeChecker command line used to analyze files. <br> Useful if you want to review the analyzer's options before running, or if you want to run the analysis manually. |
 | `CodeChecker: Show Output` | Focuses CodeChecker's output in the editor. The plugin's logs, as well as the output of previous CodeChecker runs are displayed here. |
@@ -56,6 +57,8 @@ Since CodeChecker-related paths vary greatly between systems, the following sett
 | Name | Description |
 | --- | --- |
 | CodeChecker > Backend > Output folder <br> (default: `${workspaceFolder}/.codechecker`) | The output folder where the CodeChecker analysis files are stored. |
+| CodeChecker > Backend > Database path <br> (default: *(empty)*) | Path to a custom compilation database, in case of a custom build system. The database setup dialog sets the path for the current workspace only. |
+| CodeChecker > Editor > Show database dialog <br> (default: `on`) | Controls the dialog when opening a workspace without a compilation database. |
 | CodeChecker > Executor > Executable path <br> (default: `CodeChecker`) |  Path to the CodeChecker executable (can be an executable in the `PATH` environment variable). |
 | CodeChecker > Executor > Thread count <br> (default: *(empty)*) | CodeChecker's thread count - leave empty to use all threads. |
 | CodeChecker > Executor > Arguments <br> (default: *(empty)*) | Additional arguments to CodeChecker. For supported arguments, run `CodeChecker analyze --help`. <br> *Note:* The resulting command-line can be previewed with the command `CodeChecker: Show full command line`. |
