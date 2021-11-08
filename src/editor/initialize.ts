@@ -25,8 +25,12 @@ export class FolderInitializer {
             return;
         }
 
+        const choiceMessage = ExtensionApi.executorProcess.getCompileCommandsPath() === undefined
+            ? 'Compilation database not found. How would you like to proceed?'
+            : 'Would you like to update the compilation database?';
+
         const choice = await window.showInformationMessage(
-            'compile_commands.json was not found in the CodeChecker folder. How would you like to proceed?',
+            choiceMessage,
             'Run CodeChecker log',
             'Locate',
             'Don\'t show again'
