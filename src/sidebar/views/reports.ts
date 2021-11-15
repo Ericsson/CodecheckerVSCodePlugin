@@ -246,6 +246,8 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
         }
 
         const currentReport = this.currentEntryList![element.entryIndex];
+        const steps = currentReport.path
+            .filter(pathElem => pathElem.kind === AnalysisPathKind.Event) as AnalysisPathEvent[];
 
         // First level, report list
         if (element.reprStep === undefined) {
@@ -257,7 +259,7 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
 
             const item = new TreeItem(`${fileDescription} - ${currentReport.description}`);
             item.collapsibleState = TreeItemCollapsibleState.Collapsed;
-            item.description = `(${currentReport.path.length})`;
+            item.description = `(${steps.length})`;
 
             if (currentReportPath !== this.currentFile?.fsPath) {
                 item.tooltip = `Full path to file: ${currentReportPath}`;
@@ -267,8 +269,6 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
         }
 
         // Second level, repr steps
-        const steps = currentReport.path
-            .filter(pathElem => pathElem.kind === AnalysisPathKind.Event) as AnalysisPathEvent[];
         const currentStep = steps[element.reprStep];
 
         const stepHasChildren = steps[element.reprStep + 1] && currentStep.depth < steps[element.reprStep + 1].depth;
