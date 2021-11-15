@@ -75,7 +75,7 @@ To build and run the extension, do the following:
 To run tests, select Extension Tests as the active debug configuration, or run `yarn run test`.
 
 [ESLint]: https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint
-[TypeScript+Webpack Problem Matcher]: https://marketplace.visualstudio.com/items?itemName=eamodio.tsl-problem-matcher
+[TypeScript+Webpack Problem Matcher]: https://marketplace.visualstudio.com/items?itemName=amodio.tsl-problem-matcher
 
 ## License
 
