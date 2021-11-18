@@ -47,6 +47,9 @@ export class CodeLensStepsProvider implements CodeLensProvider {
 
         const codeLenses = [];
 
+        // Used when consecutive steps are displayed
+        let previousJumpIdx = -1;
+
         for (const [idx, pathItem] of fullPath.entries()) {
             if (entry.diagnostic.files[pathItem.location.file] !== document.uri.fsPath) {
                 continue;
@@ -55,12 +58,11 @@ export class CodeLensStepsProvider implements CodeLensProvider {
             // TODO: Handle multiple ranges
             const range = new Range(
                 pathItem.location.line-1,
-                pathItem.location.col-1,
+                0,
                 pathItem.location.line-1,
-                pathItem.location.col,
+                0,
             );
 
-            // FIXME: Handle multiple steps in the same line
             codeLenses.push(new CodeLens(range, {
                 'title': `${idx + 1}: ${pathItem.message}`,
                 'command': 'codechecker.editor.jumpToStep',
@@ -71,16 +73,27 @@ export class CodeLensStepsProvider implements CodeLensProvider {
                 ]
             }));
 
-            if (idx > 0) {
+            // When there's consecutive steps on the same line, hide Next and Previous
+            const hideJumps = idx < fullPath.length - 1 &&
+                fullPath[idx + 1].location.file === pathItem.location.file &&
+                fullPath[idx + 1].location.line === pathItem.location.line;
+
+            if (hideJumps) {
+                continue;
+            }
+
+            if (previousJumpIdx >= 0) {
                 codeLenses.push(new CodeLens(range, {
                     'title': 'Previous step',
                     'command': 'codechecker.editor.jumpToStep',
                     'arguments': [
                         entry.position.file,
                         entry.position.idx,
-                        idx - 1
+                        previousJumpIdx
                     ]
                 }));
+
+                previousJumpIdx = idx;
             }
 
             if (idx < fullPath.length - 1) {
