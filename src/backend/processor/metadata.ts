@@ -136,7 +136,7 @@ export class MetadataApi implements Disposable {
 
         try {
             metadata = await parseMetadata(this.metadataPath!);
-        } catch (err) {
+        } catch (err: any) {
             switch (err.code) {
             // Silently ignore File not found errors
             case 'FileNotFound':
