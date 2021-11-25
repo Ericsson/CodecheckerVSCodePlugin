@@ -1,15 +1,26 @@
-import { Command, Event, EventEmitter, ExtensionContext, TreeDataProvider, TreeItem, TreeView, window } from 'vscode';
+import {
+    Command,
+    Event,
+    EventEmitter,
+    ExtensionContext,
+    ThemeIcon,
+    TreeDataProvider,
+    TreeItem,
+    TreeView,
+    window
+} from 'vscode';
 import { ExtensionApi } from '../../backend/api';
 import { CheckerMetadata } from '../../backend/types';
 
 export class OverviewItem {
-    constructor(private label: string | (() => string), private command?: Command) {}
+    constructor(private label: string | (() => string), private iconPath?: string, private command?: Command) {}
 
     getTreeItem(): TreeItem | Promise<TreeItem> {
         const label = typeof this.label === 'string' ? this.label : this.label();
 
         const node = new TreeItem(label);
         node.command = this.command;
+        node.iconPath = this.iconPath ? new ThemeIcon(this.iconPath) : undefined;
         node.description = this.command?.tooltip;
 
         return node;
@@ -21,18 +32,28 @@ export class OverviewView implements TreeDataProvider<OverviewItem> {
 
     private topItems: {[id: string]: OverviewItem[]} = {
         'loading': [
-            new OverviewItem('Loading overview, please wait...')
+            new OverviewItem(
+                'Loading overview, please wait...',
+                'loading'
+            )
         ],
         'notFound': [
-            new OverviewItem('CodeChecker run not found.'),
-            new OverviewItem('Run CodeChecker, reload metadata,'),
-            new OverviewItem('or set the output folder to get started')
+            new OverviewItem(
+                'CodeChecker is not run yet. Please use commands below to get started',
+                'output-view-icon'
+            )
         ],
         'normal': [
-            new OverviewItem(() => `Total files analyzed: ${ExtensionApi.metadata.sourceFiles.size}`),
-            new OverviewItem(() => `Last analysis run: ${
-                new Date(ExtensionApi.metadata.metadata!.timestamps.begin /* seconds */ * 1000).toLocaleString()
-            }`),
+            new OverviewItem(
+                () => `Total files analyzed: ${ExtensionApi.metadata.sourceFiles.size}`,
+                'graph'
+            ),
+            new OverviewItem(
+                () => `Last analysis run: ${
+                    new Date(ExtensionApi.metadata.metadata!.timestamps.begin /* seconds */ * 1000).toLocaleString()
+                }`,
+                'watch'
+            ),
             new OverviewItem(() => {
                 // Time in seconds
                 const beginTime = ExtensionApi.metadata.metadata!.timestamps.begin;
@@ -52,39 +73,58 @@ export class OverviewView implements TreeDataProvider<OverviewItem> {
                     // S.fff s
                     return `Analysis duration: ${(seconds + ms / 1000).toFixed(3)} s`;
                 }
-            }),
+            }, 'history'),
             new OverviewItem(() => `Used analyzers: ${
                 Object.keys(ExtensionApi.metadata.metadata!.analyzers).join(', ')
-            }`),
+            }`, 'tools'),
         ]
     };
 
     private bottomItems: {[id: string]: OverviewItem[]} = {
         'normal': [
-            new OverviewItem('Reload CodeChecker metadata', {
-                title: 'reloadMetadata',
-                command: 'codechecker.backend.reloadMetadata',
-            }),
-            new OverviewItem('Re-analyze current file', {
-                title: 'reloadMetadata',
-                command: 'codechecker.executor.analyzeCurrentFile',
-            }),
-            new OverviewItem('Re-analyze entire project', {
-                title: 'reloadMetadata',
-                command: 'codechecker.executor.analyzeProject',
-            }),
+            new OverviewItem(
+                'Reload CodeChecker metadata',
+                'debug-restart',
+                {
+                    title: 'reloadMetadata',
+                    command: 'codechecker.backend.reloadMetadata',
+                }
+            ),
+            new OverviewItem(
+                'Re-analyze current file',
+                'run',
+                {
+                    title: 'reloadMetadata',
+                    command: 'codechecker.executor.analyzeCurrentFile',
+                },
+            ),
+            new OverviewItem(
+                'Re-analyze entire project',
+                'run-all',
+                {
+                    title: 'reloadMetadata',
+                    command: 'codechecker.executor.analyzeProject',
+                }
+            ),
         ],
         'ccNotFound': [
-            new OverviewItem('Compilation database not found.'),
-            new OverviewItem('Show database setup dialog...', {
-                title: 'showSetupDialog',
-                command: 'codechecker.editor.showSetupDialog'
-            }),
+            new OverviewItem(
+                'Setup compilation database',
+                'database',
+                {
+                    title: 'showSetupDialog',
+                    command: 'codechecker.editor.showSetupDialog'
+                }
+            ),
             new OverviewItem('——'),
-            new OverviewItem('Reload CodeChecker metadata', {
-                title: 'reloadMetadata',
-                command: 'codechecker.backend.reloadMetadata',
-            }),
+            new OverviewItem(
+                'Reload CodeChecker metadata',
+                'debug-restart',
+                {
+                    title: 'reloadMetadata',
+                    command: 'codechecker.backend.reloadMetadata',
+                }
+            ),
         ]
     };
 
