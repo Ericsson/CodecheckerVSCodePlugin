@@ -16,91 +16,88 @@ export class OverviewItem {
     }
 }
 
-export class OverviewView implements TreeDataProvider<string> {
-    private tree?: TreeView<string>;
+export class OverviewView implements TreeDataProvider<OverviewItem> {
+    private tree?: TreeView<OverviewItem>;
 
-    // FIXME: Export the keys into an enum, or otherwise check in the itemsList if an entry exists
-    private items: {[id: string]: OverviewItem} = {
-        'loading': new OverviewItem('Loading overview, please wait...'),
+    private topItems: {[id: string]: OverviewItem[]} = {
+        'loading': [
+            new OverviewItem('Loading overview, please wait...')
+        ],
+        'notFound': [
+            new OverviewItem('CodeChecker run not found.'),
+            new OverviewItem('Run CodeChecker, reload metadata,'),
+            new OverviewItem('or set the output folder to get started')
+        ],
+        'normal': [
+            new OverviewItem(() => `Total files analyzed: ${ExtensionApi.metadata.sourceFiles.size}`),
+            new OverviewItem(() => `Last analysis run: ${
+                new Date(ExtensionApi.metadata.metadata!.timestamps.begin /* seconds */ * 1000).toLocaleString()
+            }`),
+            new OverviewItem(() => {
+                // Time in seconds
+                const beginTime = ExtensionApi.metadata.metadata!.timestamps.begin;
+                const endTime = ExtensionApi.metadata.metadata!.timestamps.end;
+                const interval = endTime - beginTime;
 
-        'notfound': new OverviewItem('CodeChecker run not found.'),
-        'notfound2': new OverviewItem('Run CodeChecker, reload metadata,'),
-        'notfound3': new OverviewItem('or set the output folder to get started'),
+                const hours = Math.floor(interval/3600) % 60;
+                const minutes = Math.floor(interval/60) % 60;
+                const seconds = Math.floor(interval) % 60;
+                const ms = Math.floor(interval * 1000) % 1000;
 
-        'files': new OverviewItem(() => `Total files analyzed: ${ExtensionApi.metadata.sourceFiles.size}`),
-        'lastRun': new OverviewItem(() => `Last analysis run: ${
-            new Date(ExtensionApi.metadata.metadata!.timestamps.begin /* seconds */ * 1000).toLocaleString()
-        }`),
-        'buildLength': new OverviewItem(() => {
-            // Time in seconds
-            const beginTime = ExtensionApi.metadata.metadata!.timestamps.begin;
-            const endTime = ExtensionApi.metadata.metadata!.timestamps.end;
-            const interval = endTime - beginTime;
-
-            const hours = Math.floor(interval/3600) % 60;
-            const minutes = Math.floor(interval/60) % 60;
-            const seconds = Math.floor(interval) % 60;
-            const ms = Math.floor(interval * 1000) % 1000;
-
-            if (hours > 0 || minutes > 0) {
-                // H:MM:SS s / M:SS s
-                const formattedMinutes = hours > 0 ? (`${hours}:${minutes.toString().padStart(2, '0')}`) : minutes;
-                return `Analysis duration: ${formattedMinutes}:${seconds.toString().padStart(2, '0')} s`;
-            } else {
-                // S.fff s
-                return `Analysis duration: ${(seconds + ms / 1000).toFixed(3)} s`;
-            }
-        }),
-        'analyzers': new OverviewItem(() => `Used analyzers: ${
-            Object.keys(ExtensionApi.metadata.metadata!.analyzers).join(', ')
-        }`),
-
-        'separator': new OverviewItem('——'),
-
-        'reloadMetadata': new OverviewItem('Reload CodeChecker metadata', {
-            title: 'reloadMetadata',
-            command: 'codechecker.backend.reloadMetadata',
-        }),
-        'analyzeCurrentFile': new OverviewItem('Re-analyze current file', {
-            title: 'reloadMetadata',
-            command: 'codechecker.executor.analyzeCurrentFile',
-        }),
-        'analyzeProject': new OverviewItem('Re-analyze entire project', {
-            title: 'reloadMetadata',
-            command: 'codechecker.executor.analyzeProject',
-        }),
+                if (hours > 0 || minutes > 0) {
+                    // H:MM:SS s / M:SS s
+                    const formattedMinutes = hours > 0 ? (`${hours}:${minutes.toString().padStart(2, '0')}`) : minutes;
+                    return `Analysis duration: ${formattedMinutes}:${seconds.toString().padStart(2, '0')} s`;
+                } else {
+                    // S.fff s
+                    return `Analysis duration: ${(seconds + ms / 1000).toFixed(3)} s`;
+                }
+            }),
+            new OverviewItem(() => `Used analyzers: ${
+                Object.keys(ExtensionApi.metadata.metadata!.analyzers).join(', ')
+            }`),
+        ]
     };
 
-    private regularItemsList = [
-        'files',
-        'lastRun',
-        'buildLength',
-        'analyzers',
+    private bottomItems: {[id: string]: OverviewItem[]} = {
+        'normal': [
+            new OverviewItem('Reload CodeChecker metadata', {
+                title: 'reloadMetadata',
+                command: 'codechecker.backend.reloadMetadata',
+            }),
+            new OverviewItem('Re-analyze current file', {
+                title: 'reloadMetadata',
+                command: 'codechecker.executor.analyzeCurrentFile',
+            }),
+            new OverviewItem('Re-analyze entire project', {
+                title: 'reloadMetadata',
+                command: 'codechecker.executor.analyzeProject',
+            }),
+        ],
+        'ccNotFound': [
+            new OverviewItem('Compilation database not found.'),
+            new OverviewItem('Show database setup dialog...', {
+                title: 'showSetupDialog',
+                command: 'codechecker.editor.showSetupDialog'
+            }),
+            new OverviewItem('——'),
+            new OverviewItem('Reload CodeChecker metadata', {
+                title: 'reloadMetadata',
+                command: 'codechecker.backend.reloadMetadata',
+            }),
+        ]
+    };
 
-        'separator',
+    private separator = [new OverviewItem('——')];
 
-        'reloadMetadata',
-        'analyzeCurrentFile',
-        'analyzeProject',
-    ];
-    private notFoundItemsList = [
-        'notfound',
-        'notfound2',
-        'notfound3',
-
-        'separator',
-
-        'reloadMetadata',
-        'analyzeCurrentFile',
-        'analyzeProject',
-    ];
-    private itemsList: string[];
+    private itemsList: OverviewItem[][];
 
     constructor(ctx: ExtensionContext) {
         ctx.subscriptions.push(this._onDidChangeTreeData = new EventEmitter());
         ExtensionApi.metadata.metadataUpdated(this.updateStats, this, ctx.subscriptions);
+        ExtensionApi.executorProcess.databaseLocationChanged(this.updateStats, this, ctx.subscriptions);
 
-        this.itemsList = ['loading'];
+        this.itemsList = [this.topItems.loading];
 
         ctx.subscriptions.push(this.tree = window.createTreeView(
             'codechecker.views.overview',
@@ -118,12 +115,16 @@ export class OverviewView implements TreeDataProvider<string> {
         }
     }
 
-    updateStats(_event?: CheckerMetadata) {
-        if (ExtensionApi.metadata.metadata !== undefined) {
-            this.itemsList = this.regularItemsList;
-        } else {
-            this.itemsList = this.notFoundItemsList;
-        }
+    updateStats(_event?: CheckerMetadata | void) {
+        const topItems = ExtensionApi.metadata.metadata !== undefined
+            ? this.topItems.normal
+            : this.topItems.notFound;
+
+        const bottomItems = ExtensionApi.executorProcess.getCompileCommandsPath() !== undefined
+            ? this.bottomItems.normal
+            : this.bottomItems.ccNotFound;
+
+        this.itemsList = [topItems, this.separator, bottomItems];
 
         this._onDidChangeTreeData.fire();
     }
@@ -133,15 +134,15 @@ export class OverviewView implements TreeDataProvider<string> {
         return this._onDidChangeTreeData.event;
     }
 
-    getChildren(element?: string): string[] {
+    getChildren(element?: OverviewItem): OverviewItem[] {
         if (element !== undefined) {
             return [];
         }
 
-        return this.itemsList;
+        return this.itemsList.flat();
     }
 
-    getTreeItem(item: string): TreeItem | Promise<TreeItem> {
-        return this.items[item].getTreeItem();
+    getTreeItem(item: OverviewItem): TreeItem | Promise<TreeItem> {
+        return item.getTreeItem();
     }
 }

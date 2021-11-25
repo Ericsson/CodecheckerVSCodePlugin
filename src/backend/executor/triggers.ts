@@ -147,8 +147,10 @@ export class ExecutorManager implements Disposable {
 
     analyzeOnSave() {
         const canAnalyzeOnSave = workspace.getConfiguration('codechecker.executor').get<boolean>('runOnSave');
+        // Fail silently if there's no compile_commands.json
+        const ccExists = ExtensionApi.executorProcess.getCompileCommandsPath() !== undefined;
 
-        if (!canAnalyzeOnSave) {
+        if (!canAnalyzeOnSave || !ccExists) {
             return;
         }
 
