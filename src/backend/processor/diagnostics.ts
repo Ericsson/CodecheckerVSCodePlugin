@@ -113,7 +113,7 @@ export class DiagnosticsApi {
                 const diagnosticEntry = await parseDiagnostics(plistFile);
                 newEntries.set(plistFile, diagnosticEntry);
                 loadedPlistFiles.add(plistFile);
-            } catch (err) {
+            } catch (err: any) {
                 switch (err.code) {
                 // Silently ignore file-related errors
                 case 'FileNotFound':
