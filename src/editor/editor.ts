@@ -1,4 +1,5 @@
 import { ExtensionContext } from 'vscode';
+import { CodeLensStepsProvider } from './codelens';
 import { DiagnosticRenderer } from './diagnostics';
 import { ExecutorAlerts } from './executor';
 import { FolderInitializer } from './initialize';
@@ -9,6 +10,7 @@ export class Editor {
     static init(ctx: ExtensionContext): void {
         this._diagnosticRenderer = new DiagnosticRenderer(ctx);
         this._navigationHandler = new NavigationHandler(ctx);
+        this._codeLensStepsProvider = new CodeLensStepsProvider(ctx);
         this._loggerPanel = new LoggerPanel(ctx);
         this._executorAlerts = new ExecutorAlerts(ctx);
         this._folderInitializer = new FolderInitializer(ctx);
@@ -17,6 +19,11 @@ export class Editor {
     private static _diagnosticRenderer: DiagnosticRenderer;
     public static get diagnosticRenderer(): DiagnosticRenderer {
         return this._diagnosticRenderer;
+    }
+
+    private static _codeLensStepsProvider: CodeLensStepsProvider;
+    public static get codeLensStepsProvider(): CodeLensStepsProvider {
+        return this._codeLensStepsProvider;
     }
 
     private static _navigationHandler: NavigationHandler;

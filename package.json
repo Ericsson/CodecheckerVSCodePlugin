@@ -100,6 +100,11 @@
           "description": "Show a dialog if the compilation database is not found",
           "default": true
         },
+        "codechecker.editor.enableCodeLens": {
+          "type": "boolean",
+          "description": "Enable CodeLens for displaying the reproduction path",
+          "default": true
+        },
         "codechecker.executor.executablePath": {
           "type": "string",
           "description": "Path to CodeChecker's executable",
