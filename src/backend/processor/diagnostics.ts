@@ -1,6 +1,6 @@
 import { Event, EventEmitter, ExtensionContext, TextEditor, Uri, window } from 'vscode';
 import { parseDiagnostics } from '../parser';
-import { CheckerMetadata, DiagnosticEntry, DiagnosticFile } from '../types';
+import { CheckerMetadata, DiagnosticReport } from '../types';
 import { ExtensionApi } from '../api';
 
 /**
@@ -11,16 +11,10 @@ export class DiagnosticsApi {
     private _openedFiles: string[] = [];
 
     /**
-     * Content based on the contents of loaded .plist files.
-     * Key: Source code file, value: .plist analysis files
+     * Loaded diagnostic entries.
+     * Key: Full path to file, value: reports related to file
      */
-    private _diagnosticSourceFiles: Map<string, string[]> = new Map();
-
-    /**
-     * Loaded diagnostic files.
-     * Key: .plist analysis file, value: file's contents
-     */
-    private _diagnosticEntries: Map<string, DiagnosticFile> = new Map();
+    private _diagnosticEntries: Map<string, DiagnosticReport[]> = new Map();
 
     private _selectedEntry?: {
         file: string,
@@ -28,7 +22,7 @@ export class DiagnosticsApi {
     };
     public get selectedEntry(): {
         position: {readonly file: string, readonly idx: number},
-        diagnostic: DiagnosticEntry
+        diagnostic: DiagnosticReport
     } | undefined {
         if (this._selectedEntry) {
             const activeFile = this.getFileDiagnostics(Uri.file(this._selectedEntry.file)) ?? [];
@@ -36,7 +30,7 @@ export class DiagnosticsApi {
 
             if (diagnostic) {
                 return {
-                    position: this._selectedEntry!,
+                    position: this._selectedEntry,
                     diagnostic
                 };
             }
@@ -74,112 +68,67 @@ export class DiagnosticsApi {
         this.onDocumentsChanged(window.visibleTextEditors);
     }
 
-    // Logs errors to the user, and always resolves.
-    async reloadDiagnosticsSafe(forceReload?: boolean): Promise<void> {
-        try {
-            await this.reloadDiagnostics(forceReload);
-        } catch (err) {
-            console.error(err);
-            window.showErrorMessage('Unexpected error when reloading reports\nCheck console for more details');
-        }
-    }
-
-    // TODO: Add support for cancellation tokens
-    async reloadDiagnostics(forceReload?: boolean): Promise<void> {
+    public reloadDiagnostics() {
         // TODO: Allow loading all diagnostics at once
-        const plistFilesToLoad = this._openedFiles.flatMap(file => ExtensionApi.metadata.sourceFiles.get(file) ?? []);
+        const filesToLoad = this._openedFiles;
 
         if (this._selectedEntry) {
-            const selectedPlistFiles = ExtensionApi.metadata.sourceFiles.get(this._selectedEntry.file) ?? [];
-            plistFilesToLoad.push(...selectedPlistFiles);
+            filesToLoad.push(this._selectedEntry.file);
         }
 
-        const loadedPlistFiles = new Set<string>();
-        const newEntries = forceReload
-            ? new Map()
-            : new Map(this._diagnosticEntries.entries());
-        const newSourceFiles = new Map();
+        ExtensionApi.executorBridge.parseMetadata(...filesToLoad.map(file => Uri.file(file)));
+    }
 
-        let plistErrors = false;
-
-        // Load new .plist files
-        for (const plistFile of plistFilesToLoad) {
-            if (newEntries.has(plistFile)) {
-                loadedPlistFiles.add(plistFile);
-                continue;
-            }
-
-            try {
-                const diagnosticEntry = await parseDiagnostics(plistFile);
-                newEntries.set(plistFile, diagnosticEntry);
-                loadedPlistFiles.add(plistFile);
-            } catch (err: any) {
-                switch (err.code) {
-                // Silently ignore file-related errors
-                case 'FileNotFound':
-                case 'Unavailable':
-                    break;
-
-                default:
-                    console.error(`Failed to read file ${plistFile}`);
-                    console.error(err);
-                    plistErrors = true;
-                }
-            }
+    // Parses diagnostic data from 'CodeChecker parse'.
+    public parseDiagnosticsData(data: string) {
+        let result;
+        try {
+            result = parseDiagnostics(data);
+        } catch (err: any) {
+            console.error('Failed to read CodeChecker data');
+            console.error(err);
+            window.showErrorMessage(
+                'Failed to read some CodeChecker diagnostic data\nCheck console for more details'
+            );
+            return;
         }
 
-        if (plistErrors) {
-            window.showErrorMessage('Failed to read some CodeChecker diagnostic data\nCheck console for more details');
+        const newEntries = new Map<string, DiagnosticReport[]>();
+
+        for (const report of result.reports) {
+            const file = report.file.original_path;
+            const entry = newEntries.get(file) ?? [];
+            entry.push(report);
+            newEntries.set(file, entry);
         }
 
-        // Remove files that are no longer referenced
-        for (const plistFile of newEntries.keys()) {
-            if (!loadedPlistFiles.has(plistFile)) {
-                newEntries.delete(plistFile);
+        if (this._selectedEntry) {
+            const originalSelected = this._diagnosticEntries.get(this._selectedEntry.file)!;
+            const newSelected = newEntries.get(this._selectedEntry.file);
+
+            // Assume that if the number of errors is the same, the entries haven't changed
+            if (originalSelected.length !== newSelected?.length) {
+                this._selectedEntry = undefined;
             }
         }
-
-        for (const [plistFile, parsedPlist] of newEntries.entries()) {
-            for (const sourceFile of parsedPlist.files) {
-                const references = newSourceFiles.get(sourceFile) || [];
-                references.push(plistFile);
-                newSourceFiles.set(sourceFile, references);
-            }
-        }
-
-        if (forceReload) {
-            this._selectedEntry = undefined;
-        }
-
         this._diagnosticEntries = newEntries;
-        this._diagnosticSourceFiles = newSourceFiles;
 
         this._diagnosticsUpdated.fire();
     }
 
     dataExistsForFile(uri: Uri): boolean {
-        return this._diagnosticSourceFiles.has(uri.fsPath);
+        return this._diagnosticEntries.has(uri.fsPath);
     }
 
-    /** Returns all opened diagnostics that run through the current file.
+    /** Returns all opened diagnostics that run through the selected files.
      *  Diagnostics that aren't in currently opened files are ignored.
-     *  Calling getFileDiagnostics for multiple Uri-s may lead to duplicates.
+     *  Calling getFileDiagnostics multiple times on different files may lead to duplicates.
      */
-    getFileDiagnostics(uri: Uri): DiagnosticEntry[] {
-        const diagnosticFiles = this._diagnosticSourceFiles.get(uri.fsPath) ?? [];
-
-        return diagnosticFiles
-            .flatMap(file => this._diagnosticEntries.get(file)?.diagnostics ?? []);
-    }
-
-    /** Returns a unique list of all diagnostics that run through the current files.
-     *  Calling getFileDiagnostics for multiple Uri-s may lead to duplicates.
-     */
-    getMultipleFileDiagnostics(uris: Uri[]): DiagnosticEntry[] {
-        const diagnosticSet = new Set<DiagnosticEntry>();
+    getFileDiagnostics(...uris: Uri[]): DiagnosticReport[] {
+        const diagnosticSet = new Set<DiagnosticReport>();
 
         for (const uri of uris) {
-            for (const diagnostic of this.getFileDiagnostics(uri)) {
+            for (const diagnostic of this._diagnosticEntries.get(uri.fsPath) ?? []) {
                 diagnosticSet.add(diagnostic);
             }
         }
@@ -195,10 +144,10 @@ export class DiagnosticsApi {
     private onDocumentsChanged(event: TextEditor[]): void {
         this._openedFiles = event.map(editor => editor.document.uri.fsPath);
 
-        this.reloadDiagnosticsSafe();
+        this.reloadDiagnostics();
     }
 
     private onMetadataUpdated(_metadata: CheckerMetadata | undefined) {
-        this.reloadDiagnosticsSafe(true);
+        this.reloadDiagnostics();
     }
 }

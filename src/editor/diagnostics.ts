@@ -11,8 +11,8 @@ import {
     languages,
     window
 } from 'vscode';
-import { AnalysisLocation, AnalysisPathEvent, AnalysisPathKind, DiagnosticEntry } from '../backend/types';
 import { ExtensionApi } from '../backend/api';
+import { DiagnosticPathEvent, DiagnosticReport } from '../backend/types';
 
 // TODO: implement api
 
@@ -43,60 +43,56 @@ export class DiagnosticRenderer {
         const diagnosticMap: Map<string, Diagnostic[]> = new Map();
 
         const makeRelatedInformation = (
-            entry: DiagnosticEntry,
-            location: AnalysisLocation,
+            entry: DiagnosticReport | DiagnosticPathEvent,
             message: string
         ): DiagnosticRelatedInformation => {
-            const file = entry.files[location.file];
+            const file = entry.file.original_path;
 
             return new DiagnosticRelatedInformation(
-                new Location(Uri.file(file), new Position(location.line-1, location.col-1)),
+                new Location(Uri.file(file), new Position(entry.line-1, entry.column-1)),
                 message
             );
         };
 
         const renderDiagnosticItem = (
-            entry: DiagnosticEntry,
-            renderedDiag: AnalysisPathEvent,
+            entry: DiagnosticReport,
+            renderedDiag: DiagnosticPathEvent,
             severity: DiagnosticSeverity,
             relatedInformation: DiagnosticRelatedInformation[]
         ): boolean => {
-            const affectedFile = Uri.file(entry.files[renderedDiag.location.file]);
+            const affectedFile = Uri.file(renderedDiag.file.original_path);
 
             // When there's no ranges, render the location
-            const ranges: Range[] = (renderedDiag.ranges ?? [[renderedDiag.location, renderedDiag.location]])
-                .map(([start, end]) => new Range(
-                    start.line-1,
-                    start.col-1,
-                    end.line-1,
-                    end.col,
-                ));
-
-            // FIXME: Find solution for multiple ranges with same error
-            // Currently, when there's 2 or more ranges, they all contain a link to the location contained in the entry
-            if (ranges.length > 1) {
-                relatedInformation.push(makeRelatedInformation(entry, entry.location, 'originated from here'));
-            }
+            const range = renderedDiag.range
+                ? new Range(
+                    renderedDiag.range.start_line-1,
+                    renderedDiag.range.start_col-1,
+                    renderedDiag.range.end_line-1,
+                    renderedDiag.range.end_col,
+                ) : new Range(
+                    renderedDiag.line-1,
+                    renderedDiag.column-1,
+                    renderedDiag.line-1,
+                    renderedDiag.column
+                );
 
             const diagnostics = diagnosticMap.get(affectedFile.toString()) ?? [];
 
-            for (const range of ranges) {
-                const finalDiag: Diagnostic = {
-                    message: renderedDiag.message,
-                    range,
-                    relatedInformation,
-                    severity,
-                    source: 'CodeChecker',
-                };
+            const finalDiag: Diagnostic = {
+                message: renderedDiag.message,
+                range,
+                relatedInformation,
+                severity,
+                source: 'CodeChecker',
+            };
 
-                diagnostics.push(finalDiag);
-            }
+            diagnostics.push(finalDiag);
 
             diagnosticMap.set(affectedFile.toString(), diagnostics);
             return false;
         };
 
-        const renderErrorsInFile = (diagnosticData: DiagnosticEntry[]) => {
+        const renderErrorsInFile = (diagnosticData: DiagnosticReport[]) => {
             // Render source diagnostics
             for (const entry of diagnosticData) {
                 if (entry === ExtensionApi.diagnostics.selectedEntry?.diagnostic) {
@@ -104,22 +100,19 @@ export class DiagnosticRenderer {
                     continue;
                 }
 
-                const errorDiag = entry.path.find(elem =>
-                    elem.kind === AnalysisPathKind.Event &&
-                    (elem as AnalysisPathEvent).message === entry.description
-                ) as AnalysisPathEvent;
+                const errorDiag = entry.bug_path_events.find(elem => elem.message === entry.message);
 
-                const entryFile = entry.files[entry.location.file];
+                const entryFile = entry.file.original_path;
 
                 // File is opened
-                if (this._openedFiles.some(file => file.fsPath === entryFile)) {
+                if (errorDiag !== undefined && this._openedFiles.some(file => file.fsPath === entryFile)) {
                     renderDiagnosticItem(entry, errorDiag, DiagnosticSeverity.Error, []);
                 }
             }
         };
 
-        const renderReproductionPath = (entry: DiagnosticEntry) => {
-            const fullPath = entry.path.filter(elem => elem.kind === AnalysisPathKind.Event) as AnalysisPathEvent[];
+        const renderReproductionPath = (entry: DiagnosticReport) => {
+            const fullPath = [...entry.bug_path_events];
 
             if (fullPath.length > 0) {
                 const errorDiag = fullPath.pop()!;
@@ -128,10 +121,9 @@ export class DiagnosticRenderer {
                 {
                     const relatedInformation: DiagnosticRelatedInformation[] = fullPath.length > 0
                         ? [
-                            makeRelatedInformation(entry, fullPath[0].location, 'first reproduction step'),
+                            makeRelatedInformation(fullPath[0], 'first reproduction step'),
                             makeRelatedInformation(
-                                entry,
-                                fullPath[fullPath.length - 2].location,
+                                fullPath[fullPath.length - 1],
                                 'last reproduction step'
                             )
                         ]
@@ -146,15 +138,15 @@ export class DiagnosticRenderer {
 
                     if (idx > 0) {
                         relatedInformation.push(
-                            makeRelatedInformation(entry, fullPath[idx - 1].location, 'previous reproduction step')
+                            makeRelatedInformation(fullPath[idx - 1], 'previous reproduction step')
                         );
                     }
                     if (idx < fullPath.length - 2) {
                         relatedInformation.push(
-                            makeRelatedInformation(entry, fullPath[idx + 1].location, 'next reproduction step')
+                            makeRelatedInformation(fullPath[idx + 1], 'next reproduction step')
                         );
                     }
-                    relatedInformation.push(makeRelatedInformation(entry, errorDiag.location, 'original report'));
+                    relatedInformation.push(makeRelatedInformation(errorDiag, 'original report'));
 
                     renderDiagnosticItem(entry, pathItem, DiagnosticSeverity.Information, relatedInformation);
                 }
@@ -169,8 +161,8 @@ export class DiagnosticRenderer {
             }
         }
 
-        const fileErrors = ExtensionApi.diagnostics.getMultipleFileDiagnostics(
-            this._openedFiles.filter(uri => ExtensionApi.diagnostics.dataExistsForFile(uri))
+        const fileErrors = ExtensionApi.diagnostics.getFileDiagnostics(
+            ...this._openedFiles.filter(uri => ExtensionApi.diagnostics.dataExistsForFile(uri))
         );
         renderErrorsInFile(fileErrors);
 

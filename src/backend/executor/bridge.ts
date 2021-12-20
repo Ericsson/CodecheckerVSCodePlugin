@@ -13,7 +13,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ExtensionApi } from '../api';
 import { getConfigAndReplaceVariables } from '../../utils/config';
-import { ProcessType, ScheduledProcess } from '.';
+import { ProcessStatus, ProcessType, ScheduledProcess } from '.';
 
 export class ExecutorBridge implements Disposable {
     private versionChecked?: boolean;
@@ -151,6 +151,40 @@ export class ExecutorBridge implements Disposable {
         ].join(' ');
     }
 
+    public getParseCmdLine(...files: Uri[]): string | undefined {
+        if (!workspace.workspaceFolders?.length) {
+            return undefined;
+        }
+
+        const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
+
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath')
+            ?? 'CodeChecker';
+        const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
+            ?? path.join(workspaceFolder, '.codechecker');
+
+        const filePaths = files.length
+            ? `--file ${files.map((uri) => `"${uri.fsPath}"`).join(' ')}`
+            : '';
+
+        return [
+            `${ccPath} parse`,
+            `${ccFolder}`,
+            '-e json',
+            filePaths
+        ].join(' ');
+    }
+
+    public getVersionCmdLine(): string | undefined {
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath')
+            ?? 'CodeChecker';
+
+        return [
+            `${ccPath} version`,
+            '--output "json"',
+        ].join(' ');
+    }
+
     private analyzeOnSave() {
         const canAnalyzeOnSave = workspace.getConfiguration('codechecker.executor').get<boolean>('runOnSave');
         // Fail silently if there's no compile_commands.json
@@ -222,6 +256,30 @@ export class ExecutorBridge implements Disposable {
         if (ExtensionApi.executorManager.activeProcess?.processParameters.processType === ProcessType.analyze) {
             ExtensionApi.executorManager.killProcess();
         }
+    }
+
+    public parseMetadata(...files: Uri[]) {
+        // FIXME: Check CodeChecker version before running
+        const commandLine = this.getParseCmdLine(...files);
+
+        if (commandLine === undefined) {
+            return;
+        }
+
+        const process = new ScheduledProcess(commandLine, { processType: ProcessType.parse });
+
+        // TODO: Find a better way to collect full logger output
+        let processOutput = '';
+
+        process.processStdout((output) => processOutput += output);
+
+        process.processStatusChange((status) => {
+            if (status === ProcessStatus.finished) {
+                ExtensionApi.diagnostics.parseDiagnosticsData(processOutput);
+            }
+        });
+
+        ExtensionApi.executorManager.addToQueue(process, 'replace');
     }
 
     private updateDatabasePaths() {

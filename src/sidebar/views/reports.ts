@@ -13,7 +13,7 @@ import {
     window
 } from 'vscode';
 import { ExtensionApi } from '../../backend/api';
-import { AnalysisPathEvent, AnalysisPathKind, DiagnosticEntry } from '../../backend/types';
+import { DiagnosticReport } from '../../backend/types';
 
 export interface IssueMetadata {
     entryIndex?: number;
@@ -25,7 +25,7 @@ export interface IssueMetadata {
 
 export class ReportsView implements TreeDataProvider<IssueMetadata> {
     protected currentFile?: Uri;
-    protected currentEntryList?: DiagnosticEntry[];
+    protected currentEntryList?: DiagnosticReport[];
 
     protected tree?: TreeView<IssueMetadata>;
 
@@ -127,8 +127,8 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
             ];
 
             const currentItems = this.currentEntryList!
-                .map((entry, idx): [DiagnosticEntry, number] => [entry, idx])
-                .filter(([entry, _]) => entry.files[entry.location.file] === this.currentFile?.fsPath)
+                .map((entry, idx): [DiagnosticReport, number] => [entry, idx])
+                .filter(([entry, _]) => entry.file.original_path === this.currentFile?.fsPath)
                 .map(([_, entryIndex]) => { return { entryIndex }; });
 
             const relatedHeader: IssueMetadata[] = [
@@ -137,8 +137,8 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
             ];
 
             const relatedItems = this.currentEntryList!
-                .map((entry, idx): [DiagnosticEntry, number] => [entry, idx])
-                .filter(([entry, _]) => entry.files[entry.location.file] !== this.currentFile?.fsPath)
+                .map((entry, idx): [DiagnosticReport, number] => [entry, idx])
+                .filter(([entry, _]) => entry.file.original_path !== this.currentFile?.fsPath)
                 .map(([_, entryIndex]) => { return { entryIndex }; });
 
             return header
@@ -154,9 +154,8 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
             return [];
         }
 
-        const path = this.currentEntryList![element.entryIndex].path
-            .filter(pathElem => pathElem.kind === AnalysisPathKind.Event)
-            .map((pathElem, idx) => { return { idx, pathElem: pathElem as AnalysisPathEvent }; });
+        const path = this.currentEntryList![element.entryIndex].bug_path_events
+            .map((pathElem, idx) => { return { idx, pathElem }; });
 
         // Second level, reproduction steps
         if (element.reprStep === undefined) {
@@ -186,7 +185,7 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
             ];
 
             const items = path
-                .filter(({ pathElem }) => pathElem.depth === 0)
+                .filter((/* { pathElem } */) => /* pathElem.depth */ 0 === 0)
                 .map(({ idx }) => {
                     return {
                         ...element,
@@ -200,18 +199,18 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
         // Third level, children of reproduction steps
         // There are inner-depth children
         if (
-            path[element.reprStep + 1] &&
-            path[element.reprStep + 1].pathElem.depth > path[element.reprStep].pathElem.depth
+            path[element.reprStep + 1] /* &&
+            path[element.reprStep + 1].pathElem.depth > path[element.reprStep].pathElem.depth */
         ) {
             const children = path.slice(element.reprStep + 1);
 
-            const startingDepth = path[element.reprStep].pathElem.depth;
-            const childDepth = path[element.reprStep + 1].pathElem.depth;
+            /* const startingDepth = path[element.reprStep].pathElem.depth; */
+            /* const childDepth = path[element.reprStep + 1].pathElem.depth; */
 
-            const sameLevelIdx = children.findIndex(({ pathElem }) => pathElem.depth <= startingDepth);
+            const sameLevelIdx = children.findIndex((/* { pathElem } */) => /* pathElem.depth <= startingDepth */ true);
 
             const items = children.slice(0, sameLevelIdx)
-                .filter(({ pathElem }) => pathElem.depth <= childDepth)
+                /* .filter(({ pathElem }) => pathElem.depth <= childDepth) */
                 .map(({ idx }) => {
                     return {
                         ...element,
@@ -246,18 +245,17 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
         }
 
         const currentReport = this.currentEntryList![element.entryIndex];
-        const steps = currentReport.path
-            .filter(pathElem => pathElem.kind === AnalysisPathKind.Event) as AnalysisPathEvent[];
+        const steps = currentReport.bug_path_events;
 
         // First level, report list
         if (element.reprStep === undefined) {
-            const currentReportPath = currentReport.files[currentReport.location.file];
+            const currentReportPath = currentReport.file.original_path;
 
             const fileDescription = currentReportPath === this.currentFile?.fsPath
-                ? `[L${currentReport.location.line}]`
-                : `[${basename(currentReportPath)}:${currentReport.location.line}]`;
+                ? `[L${currentReport.line}]`
+                : `[${basename(currentReportPath)}:${currentReport.line}]`;
 
-            const item = new TreeItem(`${fileDescription} - ${currentReport.description}`);
+            const item = new TreeItem(`${fileDescription} - ${currentReport.message}`);
             item.collapsibleState = TreeItemCollapsibleState.Collapsed;
             item.description = `(${steps.length})`;
 
@@ -271,15 +269,15 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
         // Second level, repr steps
         const currentStep = steps[element.reprStep];
 
-        const stepHasChildren = steps[element.reprStep + 1] && currentStep.depth < steps[element.reprStep + 1].depth;
-        const currentStepPath = currentReport.files[currentStep.location.file];
+        // const stepHasChildren = steps[element.reprStep + 1] && currentStep.depth < steps[element.reprStep + 1].depth;
+        const currentStepPath = currentReport.file.original_path;
         const currentStepFile = basename(currentStepPath);
 
         const item = new TreeItem(
-            `${element.reprStep + 1}. [${currentStepFile}:${currentStep.location.line}] - ${currentStep.message}`
+            `${element.reprStep + 1}. [${currentStepFile}:${currentStep.line}] - ${currentStep.message}`
         );
-        item.tooltip = `${currentStep.extended_message}\nFull path to file: ${currentStepPath}`;
-        item.collapsibleState = stepHasChildren ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.None;
+        item.tooltip = `Full path to file: ${currentStepPath}`;
+        item.collapsibleState = /* stepHasChildren ? TreeItemCollapsibleState.Expanded :*/TreeItemCollapsibleState.None;
         item.command = {
             title: 'jumpToStep',
             command: 'codechecker.editor.jumpToStep',

@@ -1,6 +1,6 @@
 import { ExtensionContext, Position, Range, Uri, commands, window } from 'vscode';
 import { ExtensionApi } from '../backend/api';
-import { AnalysisPathEvent, AnalysisPathKind, DiagnosticEntry } from '../backend/types';
+import { DiagnosticReport } from '../backend/types';
 
 export class NavigationHandler {
     constructor(ctx: ExtensionContext) {
@@ -33,16 +33,16 @@ export class NavigationHandler {
             file = Uri.file(file);
         }
 
-        const diagnostic = ExtensionApi.diagnostics.getFileDiagnostics(file)[diagnosticIndex];
-        const location = diagnostic?.location;
-        const targetFile = location !== undefined ? Uri.file(diagnostic.files[location.file]) : file;
+        const diagnostic: DiagnosticReport | undefined =
+            ExtensionApi.diagnostics.getFileDiagnostics(file)[diagnosticIndex];
+        const targetFile = diagnostic ? Uri.file(diagnostic.file.original_path) : file;
 
         window.showTextDocument(targetFile, {
-            selection: location !== undefined ? new Range(
-                location.line - 1,
-                location.col - 1,
-                location.line - 1,
-                location.col - 1
+            selection: diagnostic !== undefined ? new Range(
+                diagnostic.line - 1,
+                diagnostic.column - 1,
+                diagnostic.line - 1,
+                diagnostic.column - 1
             ) : undefined
         });
 
@@ -56,26 +56,23 @@ export class NavigationHandler {
             file = Uri.file(file);
         }
 
-        const diagnostic: DiagnosticEntry | undefined = ExtensionApi.diagnostics.getFileDiagnostics(file)[bugIndex];
-        const diagnosticLocation = diagnostic?.location;
+        const diagnostic: DiagnosticReport | undefined = ExtensionApi.diagnostics.getFileDiagnostics(file)[bugIndex];
 
-        const step = diagnostic?.path
-            .filter(elem => elem.kind === AnalysisPathKind.Event)[stepIndex] as AnalysisPathEvent;
-        const stepLocation = step?.location ?? diagnosticLocation;
+        const step = diagnostic?.bug_path_events[stepIndex];
 
-        const targetFile = stepLocation !== undefined ? Uri.file(diagnostic.files[stepLocation.file])
-            : diagnosticLocation !== undefined ? Uri.file(diagnostic.files[diagnosticLocation.file])
+        const targetFile = step ? Uri.file(step.file.original_path)
+            : diagnostic !== undefined ? Uri.file(diagnostic.file.original_path)
                 : file;
 
         // Show the reproduction path on jumping to a step, to enable navigation.
         this.toggleSteps(file, bugIndex, true);
 
         window.showTextDocument(targetFile, {
-            selection: stepLocation !== undefined ? new Range(
-                stepLocation.line - 1,
-                stepLocation.col - 1,
-                stepLocation.line - 1,
-                stepLocation.col - 1
+            selection: step !== undefined ? new Range(
+                step.line - 1,
+                step.column - 1,
+                step.line - 1,
+                step.column - 1
             ) : undefined
         });
 
@@ -94,18 +91,17 @@ export class NavigationHandler {
         const cursor = window.activeTextEditor.selection.anchor;
 
         const entry = ExtensionApi.diagnostics.selectedEntry.diagnostic;
-        const reprPath = entry.path
-            .filter(e => e.kind === AnalysisPathKind.Event) as AnalysisPathEvent[];
+        const reprPath = entry.bug_path_events;
 
         let foundIdx = null;
 
         for (const [idx, path] of reprPath.entries()) {
             // Check location first
-            if (window.activeTextEditor.document.uri.fsPath !== entry.files[path.location.file]) {
+            if (window.activeTextEditor.document.uri.fsPath !== entry.file.original_path) {
                 continue;
             }
 
-            if (cursor.isEqual(new Position(path.location.line-1, path.location.col-1))) {
+            if (cursor.isEqual(new Position(path.line-1, path.column-1))) {
                 foundIdx = idx;
 
                 if (which === 'first') {
@@ -116,24 +112,22 @@ export class NavigationHandler {
             }
 
             // Check inside the ranges
-            if (!path.ranges) {
+            if (!path.range) {
                 continue;
             }
 
-            for (const [start, end] of path.ranges) {
-                const range = new Range(
-                    start.line-1,
-                    start.col-1,
-                    end.line-1,
-                    end.col,
-                );
+            const range = new Range(
+                path.range.start_line-1,
+                path.range.start_col-1,
+                path.range.start_line-1,
+                path.range.start_col,
+            );
 
-                if (range.contains(cursor)) {
-                    foundIdx = idx;
+            if (range.contains(cursor)) {
+                foundIdx = idx;
 
-                    if (which === 'first') {
-                        break;
-                    }
+                if (which === 'first') {
+                    break;
                 }
             }
         }
@@ -149,18 +143,17 @@ export class NavigationHandler {
             return;
         }
 
-        const reprPath = entry.path
-            .filter(e => e.kind === AnalysisPathKind.Event) as AnalysisPathEvent[];
+        const reprPath = entry.bug_path_events;
 
         if (stepIdx < reprPath.length - 1) {
-            const stepLocation = reprPath[stepIdx + 1].location;
+            const step = reprPath[stepIdx + 1];
 
-            window.showTextDocument(Uri.file(entry.files[stepLocation.file]), {
+            window.showTextDocument(Uri.file(entry.file.original_path), {
                 selection: new Range(
-                    stepLocation.line - 1,
-                    stepLocation.col - 1,
-                    stepLocation.line - 1,
-                    stepLocation.col - 1
+                    step.line - 1,
+                    step.column - 1,
+                    step.line - 1,
+                    step.column - 1
                 )
             });
         }
@@ -174,18 +167,17 @@ export class NavigationHandler {
             return;
         }
 
-        const reprPath = entry.path
-            .filter(e => e.kind === AnalysisPathKind.Event) as AnalysisPathEvent[];
+        const reprPath = entry.bug_path_events;
 
         if (stepIdx > 0) {
-            const stepLocation = reprPath[stepIdx - 1].location;
+            const step = reprPath[stepIdx - 1];
 
-            window.showTextDocument(Uri.file(entry.files[stepLocation.file]), {
+            window.showTextDocument(Uri.file(entry.file.original_path), {
                 selection: new Range(
-                    stepLocation.line - 1,
-                    stepLocation.col - 1,
-                    stepLocation.line - 1,
-                    stepLocation.col - 1
+                    step.line - 1,
+                    step.column - 1,
+                    step.line - 1,
+                    step.column - 1
                 )
             });
         }

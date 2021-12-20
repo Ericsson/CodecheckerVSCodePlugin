@@ -11,7 +11,6 @@ import {
     workspace
 } from 'vscode';
 import { ExtensionApi } from '../backend';
-import { AnalysisPathEvent, AnalysisPathKind } from '../backend/types';
 
 export class CodeLensStepsProvider implements CodeLensProvider {
     constructor(ctx: ExtensionContext) {
@@ -38,8 +37,7 @@ export class CodeLensStepsProvider implements CodeLensProvider {
         }
 
         const entry = ExtensionApi.diagnostics.selectedEntry;
-        const fullPath = entry.diagnostic.path
-            .filter(elem => elem.kind === AnalysisPathKind.Event) as AnalysisPathEvent[];
+        const fullPath = entry.diagnostic.bug_path_events;
 
         if (fullPath.length === 0) {
             return [];
@@ -51,15 +49,15 @@ export class CodeLensStepsProvider implements CodeLensProvider {
         let previousJumpIdx = -1;
 
         for (const [idx, pathItem] of fullPath.entries()) {
-            if (entry.diagnostic.files[pathItem.location.file] !== document.uri.fsPath) {
+            if (pathItem.file.original_path !== document.uri.fsPath) {
                 continue;
             }
 
             // TODO: Handle multiple ranges
             const range = new Range(
-                pathItem.location.line-1,
+                pathItem.line-1,
                 0,
-                pathItem.location.line-1,
+                pathItem.line-1,
                 0,
             );
 
@@ -75,8 +73,8 @@ export class CodeLensStepsProvider implements CodeLensProvider {
 
             // When there's consecutive steps on the same line, hide Next and Previous
             const hideJumps = idx < fullPath.length - 1 &&
-                fullPath[idx + 1].location.file === pathItem.location.file &&
-                fullPath[idx + 1].location.line === pathItem.location.line;
+                fullPath[idx + 1].file.original_path === pathItem.file.original_path &&
+                fullPath[idx + 1].line === pathItem.line;
 
             if (hideJumps) {
                 continue;
