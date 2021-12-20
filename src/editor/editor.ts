@@ -5,6 +5,7 @@ import { ExecutorAlerts } from './executor';
 import { FolderInitializer } from './initialize';
 import { LoggerPanel } from './logger';
 import { NavigationHandler } from './navigation';
+import { ExecutorTaskProvider } from './tasks';
 
 export class Editor {
     static init(ctx: ExtensionContext): void {
@@ -14,6 +15,7 @@ export class Editor {
         this._loggerPanel = new LoggerPanel(ctx);
         this._executorAlerts = new ExecutorAlerts(ctx);
         this._folderInitializer = new FolderInitializer(ctx);
+        this._executorTaskProvider = new ExecutorTaskProvider(ctx);
     }
 
     private static _diagnosticRenderer: DiagnosticRenderer;
@@ -44,5 +46,10 @@ export class Editor {
     private static _folderInitializer: FolderInitializer;
     public static get folderInitializer(): FolderInitializer {
         return this._folderInitializer;
+    }
+
+    private static _executorTaskProvider: ExecutorTaskProvider;
+    public static get executorTaskProvider(): ExecutorTaskProvider {
+        return this._executorTaskProvider;
     }
 }

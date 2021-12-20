@@ -1,7 +1,5 @@
 import * as child_process from 'child_process';
-import * as fs from 'fs';
-import * as path from 'path';
-import { Disposable, Event, EventEmitter, ExtensionContext, FileSystemWatcher, Uri, window, workspace } from 'vscode';
+import { Disposable, Event, EventEmitter, ExtensionContext, workspace } from 'vscode';
 
 export enum ProcessStatus {
     notRunning,
@@ -9,19 +7,44 @@ export enum ProcessStatus {
     killed,
     finished,
     errored,
+    // When overwritten in the queue with 'replace', or cleared
+    removed,
 }
 
-export class ExecutorProcess implements Disposable {
-    activeProcess?: child_process.ChildProcess;
+export enum ProcessType {
+    analyze = 'CodeChecker analyze',
+    parse = 'CodeChecker parse',
+    version = 'CodeChecker version',
+    other = 'Other process',
+}
+
+export interface ProcessParameters {
+    /** Default: true, false when type is parse */
+    forwardStdoutToLogs?: boolean,
+    /** Default: true, false when type is parse or version */
+    showProgressBar?: boolean,
+    /**
+     * Name of the process, preferred to be one of ProcessType.
+     * Default: other
+     */
+    processType?: string
+}
+
+export class ScheduledProcess implements Disposable {
+    /** Full command line of the scheduled process. */
+    public readonly commandLine: string;
+
+    private activeProcess?: child_process.ChildProcess;
+
+    /** Contains parameters for the executor. All members are defined. */
+    public readonly processParameters: ProcessParameters;
 
     /** Every line should have a newline at the end */
     private _processStdout: EventEmitter<string> = new EventEmitter();
     /**
      * Standard output of the process.
      *
-     * Also contains other metadata:
-     * * ``> command`` for each executed command,
-     * * ``>>> metadata`` for other information, eg. when a process is finished.
+     * Does not contain any metadata.
      */
     public get processStdout(): Event<string> {
         return this._processStdout.event;
@@ -29,7 +52,13 @@ export class ExecutorProcess implements Disposable {
 
     /** Every line should have a newline at the end */
     private _processStderr: EventEmitter<string> = new EventEmitter();
-    /** Standard error of the process. */
+    /**
+     * Standard error of the process.
+     *
+     * Also contains other metadata:
+     * ``> command`` for the executed command,
+     * ``>>> metadata`` for other information, eg. when the process is finished.
+     */
     public get processStderr(): Event<string> {
         return this._processStderr.event;
     }
@@ -44,66 +73,93 @@ export class ExecutorProcess implements Disposable {
         return this._processStatusChange.event;
     }
 
-    private _databaseLocationChanged: EventEmitter<void> = new EventEmitter();
-    public get databaseLocationChanged(): Event<void> {
-        return this._databaseLocationChanged.event;
-    }
+    constructor(commandLine: string, parameters: ProcessParameters) {
+        this.commandLine = commandLine;
+        this.processParameters = parameters;
 
-    private databaseWatches: FileSystemWatcher[] = [];
-    private databaseEvents: Disposable[] = [];
-    private databasePaths: (string | undefined)[] = [];
+        const forwardDefaults: string[] = [ ProcessType.parse ];
+        const progressDefaults: string[] = [ ProcessType.parse, ProcessType.version ];
 
-    /** Automatically adds itself to ctx.subscriptions. */
-    constructor(ctx: ExtensionContext) {
-        ctx.subscriptions.push(this);
-        workspace.onDidChangeConfiguration(this.updateDatabasePaths, this, ctx.subscriptions);
+        if (this.processParameters.forwardStdoutToLogs === undefined) {
+            this.processParameters.forwardStdoutToLogs = !forwardDefaults.includes(parameters.processType ?? '');
+        }
 
-        this.updateDatabasePaths();
+        if (this.processParameters.showProgressBar === undefined) {
+            this.processParameters.showProgressBar = !progressDefaults.includes(parameters.processType ?? '');
+        }
     }
 
     dispose() {
-        this.databaseEvents.forEach(watch => watch.dispose());
-        this.databaseWatches.forEach(watch => watch.dispose());
+        if (this.activeProcess) {
+            this.activeProcess.kill();
+        }
+
+        this._processStatusChange.fire(ProcessStatus.removed);
+
+        this._processStatusChange.dispose();
+        this._processStdout.dispose();
+        this._processStderr.dispose();
     }
 
-    updateDatabasePaths() {
-        if (!workspace.workspaceFolders?.length) {
+    /** This should only be called by the executor. */
+    startProcess() {
+        if (this.activeProcess !== undefined) {
             return;
         }
 
-        const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
-
-        const getConfigAndReplaceVariables = (category: string, name: string): string | undefined => {
-            const configValue = workspace.getConfiguration(category).get<string>(name);
-            return configValue
-                ?.replace(/\${workspaceRoot}/g, workspaceFolder)
-                .replace(/\${workspaceFolder}/g, workspaceFolder)
-                .replace(/\${cwd}/g, process.cwd())
-                .replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => process.env[envName] ?? '');
-        };
-
-        const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
-            ?? path.join(workspaceFolder, '.codechecker');
-
-        this.databasePaths = [
-            getConfigAndReplaceVariables('codechecker.backend', 'databasePath'),
-            path.join(ccFolder, 'compile_commands.json'),
-            path.join(ccFolder, 'compile_cmd.json')
-        ];
-
-        this.databaseEvents.forEach(watch => watch.dispose());
-        this.databaseWatches.forEach(watch => watch.dispose());
-
-        this.databaseWatches = this.databasePaths
-            .filter(x => x !== undefined)
-            .map(path => workspace.createFileSystemWatcher(path!));
-
-        for (const watch of this.databaseWatches) {
-            this.databaseEvents.push(watch.onDidCreate(() => this._databaseLocationChanged.fire()));
-            this.databaseEvents.push(watch.onDidDelete(() => this._databaseLocationChanged.fire()));
+        if (!workspace.workspaceFolders?.length) {
+            // Silently ignore the call - user will be warned via other modules
+            return;
         }
 
-        this._databaseLocationChanged.fire();
+        const commonName = this.processParameters.processType ?? 'Other';
+
+        this._processStderr.fire(`>>> Starting process '${commonName}'\n`);
+        this._processStderr.fire(`> ${this.commandLine}\n`);
+        this.activeProcess = child_process.spawn(this.commandLine, { shell: true });
+
+        this.activeProcess.stdout!.on('data', (stdout: Buffer) => {
+            const decoded = stdout.toString();
+            this._processStdout.fire(decoded);
+        });
+
+        this.activeProcess.stderr!.on('data', (stderr) => {
+            const decoded = stderr.toString();
+            this._processStderr.fire(decoded);
+        });
+
+        this.activeProcess.on('error', (err) => {
+            this._processStderr.fire(`>>> Process '${commonName}' errored: ${err.message}\n`);
+            this.updateStatus(ProcessStatus.errored);
+        });
+        // Guaranteed to fire after all datastreams are closed
+        this.activeProcess.on('close', (code: number | null) => {
+            this._processStderr.fire(`>>> Process '${commonName}' exited with code ${code ?? 0}\n`);
+
+            switch (code) {
+            case null:
+            case 0:
+            case 2:
+                this.updateStatus(ProcessStatus.finished);
+                break;
+            default:
+                this.updateStatus(ProcessStatus.errored);
+                break;
+            }
+        });
+
+        this.updateStatus(ProcessStatus.running);
+    }
+
+    public killProcess() {
+        if (this.activeProcess === undefined) {
+            return;
+        }
+
+        this.activeProcess.kill('SIGINT');
+        this._processStderr.fire('>>> Process killed\n');
+
+        this.updateStatus(ProcessStatus.killed);
     }
 
     private updateStatus(status: ProcessStatus) {
@@ -123,166 +179,171 @@ export class ExecutorProcess implements Disposable {
             break;
         }
     }
+}
 
-    public getCompileCommandsPath() {
-        if (!workspace.workspaceFolders?.length) {
-            return undefined;
-        }
+export class ExecutorManager implements Disposable {
+    public activeProcess?: ScheduledProcess;
 
-        for (const filePath of this.databasePaths) {
-            if (filePath && fs.existsSync(filePath)) {
-                this._processStderr.fire(`>>> Database found at path: ${filePath}\n`);
-                return filePath;
-            }
-        }
+    private executionPriority = [
+        ProcessType.version,
+        ProcessType.parse,
+        ProcessType.analyze
+    ];
 
-        this._processStderr.fire('>>> No database found in the following paths:\n');
-        for (const filePath of this.databasePaths) {
-            if (filePath) {
-                this._processStderr.fire(`>>>   ${filePath}\n`);
-            } else {
-                this._processStderr.fire('>>>   <no path set in settings>\n');
-            }
-        }
+    /** Map of scheduled processes, indexed by its commonName.
+     *
+     * Priority of execution:
+     * 1. version
+     * 2. parse
+     * 3. analyze
+     * 4. all other ones
+     */
+    private queue: Map<string, ScheduledProcess[]> = new Map();
 
-        return undefined;
+    /** Every line should have a newline at the end */
+    private _processStdout: EventEmitter<string> = new EventEmitter();
+    /**
+     * Standard output of the process.
+     *
+     * Note that not all process output is routed through this event.
+     */
+    public get processStdout(): Event<string> {
+        return this._processStdout.event;
     }
 
-    public getProcessCmdLine(...files: Uri[]): string | undefined {
-        if (!workspace.workspaceFolders?.length) {
-            return undefined;
-        }
-
-        const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
-
-        const getConfigAndReplaceVariables = (category: string, name: string): string | undefined => {
-            const configValue = workspace.getConfiguration(category).get<string>(name);
-            return configValue
-                ?.replace(/\${workspaceRoot}/g, workspaceFolder)
-                .replace(/\${workspaceFolder}/g, workspaceFolder)
-                .replace(/\${cwd}/g, process.cwd())
-                .replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => process.env[envName] ?? '');
-        };
-
-        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath')
-            ?? 'CodeChecker';
-        const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
-            ?? path.join(workspaceFolder, '.codechecker');
-        const ccArguments = getConfigAndReplaceVariables('codechecker.executor', 'arguments') ?? '';
-        const ccThreads = workspace.getConfiguration('codechecker.executor').get<string>('threadCount');
-
-        const ccCompileCmd = this.getCompileCommandsPath();
-
-        if (ccCompileCmd === undefined) {
-            window.showWarningMessage('No compilation database found, CodeChecker not started - see logs for details');
-            return undefined;
-        }
-
-        const filePaths = files.length
-            ? `--file ${files.map((uri) => `"${uri.fsPath}"`).join(' ')}`
-            : '';
-
-        return [
-            `${ccPath} analyze`,
-            `"${ccCompileCmd}"`,
-            `--output "${ccFolder}"`,
-            `${ccThreads ? '-j ' + ccThreads : ''}`,
-            `${ccArguments}`,
-            `${filePaths}`,
-        ].join(' ');
+    /** Every line should have a newline at the end */
+    private _processStderr: EventEmitter<string> = new EventEmitter();
+    /**
+     * Standard error of the process.
+     *
+     * Also contains other metadata:
+     * ``> command`` for each executed command,
+     * ``>>> metadata`` for other information, eg. when a process is finished.
+     */
+    public get processStderr(): Event<string> {
+        return this._processStderr.event;
     }
 
-    public getLogCmdLine(): string | undefined {
-        if (!workspace.workspaceFolders?.length) {
-            return undefined;
+    private _processStatus: ProcessStatus = ProcessStatus.notRunning;
+    public get processStatus(): ProcessStatus {
+        return this._processStatus;
+    }
+
+    private _processStatusChange: EventEmitter<ProcessStatus> = new EventEmitter();
+    public get processStatusChange(): Event<ProcessStatus> {
+        return this._processStatusChange.event;
+    }
+
+    /** Automatically adds itself to ctx.subscriptions. */
+    constructor(ctx: ExtensionContext) {
+        ctx.subscriptions.push(this);
+    }
+
+    dispose() {
+        this.clearQueue();
+    }
+
+    private updateStatus(status: ProcessStatus) {
+        switch (status) {
+        case ProcessStatus.removed:
+            this._processStatusChange.fire(status);
+            break;
+        case ProcessStatus.running:
+            this._processStatusChange.fire(ProcessStatus.running);
+            break;
+        default:
+            this._processStatusChange.fire(status);
+            this.activeProcess?.dispose();
+            this.activeProcess = undefined;
+            this.startNextProcess();
+            break;
+        }
+    }
+
+    /** Add scheduled process to the queue, based on processName.
+     * 'append' (default) moves to the end, 'replace' replaces the entire queue, 'prepend' moves to the front.
+     */
+    public addToQueue(process: ScheduledProcess, method?: 'append' | 'replace' | 'prepend') {
+        const name = process.processParameters.processType!;
+        let namedQueue = this.queue.get(name) ?? [];
+
+        switch (method) {
+        case 'replace':
+            namedQueue = [process];
+            break;
+        case 'prepend':
+            namedQueue.unshift(process);
+            break;
+        case 'append':
+        default:
+            namedQueue.push(process);
+            break;
         }
 
-        const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
+        this.queue.set(name, namedQueue);
 
-        const getConfigAndReplaceVariables = (category: string, name: string): string | undefined => {
-            const configValue = workspace.getConfiguration(category).get<string>(name);
-            return configValue
-                ?.replace(/\${workspaceRoot}/g, workspaceFolder)
-                .replace(/\${workspaceFolder}/g, workspaceFolder)
-                .replace(/\${cwd}/g, process.cwd())
-                .replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => process.env[envName] ?? '');
-        };
+        this.startNextProcess();
+    }
 
-        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath')
-            ?? 'CodeChecker';
-        const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
-            ?? path.join(workspaceFolder, '.codechecker');
-
-        // Use a predefined path here
-        const ccCompileCmd = path.join(ccFolder, 'compile_commands.json');
-
-        return [
-            `${ccPath} log`,
-            `--output "${ccCompileCmd}"`,
-            '--build "make"'
-        ].join(' ');
+    /** Clears the entire queue, or just one name. */
+    public clearQueue(name?: string) {
+        if (name) {
+            this.queue.set(name, []);
+        } else {
+            this.queue.clear();
+        }
     }
 
     /**
-     * If the arguments are empty, the entire project is analyzed
+     * Starts the next executor in the queue, according to its priority.
      */
-    public startProcess(...files: Uri[]) {
-        if (this.activeProcess !== undefined) {
+    public startNextProcess() {
+        if (this.activeProcess) {
             return;
         }
 
-        if (!workspace.workspaceFolders?.length) {
-            // Silently ignore the call - user will be warned via other modules
-            return;
-        }
+        let nextExecution: ScheduledProcess | null = null;
 
-        const commandLine = this.getProcessCmdLine(...files);
+        // Priority running
+        for (const name of this.executionPriority) {
+            const namedQueue = this.queue.get(name) ?? [];
 
-        if (commandLine === undefined) {
-            return;
-        }
-
-        this._processStdout.fire(`> ${commandLine}\n`);
-        this.activeProcess = child_process.spawn(commandLine, { shell: true });
-        this.activeProcess.stdout!.on('data', (stdout: Buffer) => {
-            const decoded = stdout.toString();
-            this._processStdout.fire(decoded);
-        });
-
-        this.activeProcess.stderr!.on('data', (stderr) => {
-            const decoded = stderr.toString();
-            this._processStderr.fire(decoded);
-        });
-
-        this.activeProcess.on('error', (err) => {
-            this._processStdout.fire(`>>> Process errored: ${err.message}\n`);
-            this.updateStatus(ProcessStatus.errored);
-        });
-        this.activeProcess.on('exit', (code: number | null) => {
-            this._processStdout.fire(`>>> Process exited with code ${code ?? 0}\n`);
-
-            switch (code) {
-            case null:
-            case 0:
-                this.updateStatus(ProcessStatus.finished);
-                break;
-            default:
-                this.updateStatus(ProcessStatus.errored);
+            if (namedQueue.length !== 0) {
+                nextExecution = namedQueue[0];
+                this.queue.set(name, namedQueue.slice(1));
                 break;
             }
-        });
+        }
 
-        this.updateStatus(ProcessStatus.running);
+        if (!nextExecution) {
+            for (const [name, namedQueue] of this.queue.entries()) {
+                if (namedQueue.length !== 0) {
+                    nextExecution = namedQueue[0];
+                    this.queue.set(name, namedQueue.slice(1));
+                    break;
+                }
+            }
+        }
+
+        if (nextExecution === null) {
+            return;
+        }
+
+        this.activeProcess = nextExecution;
+        const { forwardStdoutToLogs } = this.activeProcess.processParameters;
+
+        // All of these listeners will be disposed when activeProcess is disposed.
+        if (forwardStdoutToLogs) {
+            this.activeProcess.processStdout(this._processStdout.fire, this._processStdout);
+        }
+
+        this.activeProcess.processStderr(this._processStderr.fire, this._processStderr);
+        this.activeProcess.processStatusChange(this.updateStatus, this);
+
+        this.activeProcess.startProcess();
     }
 
     public killProcess() {
-        if (this.activeProcess === undefined) {
-            return;
-        }
-
-        this.activeProcess.kill('SIGINT');
-        this._processStdout.fire('>>> Process killed\n');
-
-        this.updateStatus(ProcessStatus.killed);
+        this.activeProcess?.killProcess();
     }
 }

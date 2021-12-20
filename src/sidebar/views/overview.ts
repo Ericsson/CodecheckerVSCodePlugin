@@ -135,7 +135,7 @@ export class OverviewView implements TreeDataProvider<OverviewItem> {
     constructor(ctx: ExtensionContext) {
         ctx.subscriptions.push(this._onDidChangeTreeData = new EventEmitter());
         ExtensionApi.metadata.metadataUpdated(this.updateStats, this, ctx.subscriptions);
-        ExtensionApi.executorProcess.databaseLocationChanged(this.updateStats, this, ctx.subscriptions);
+        ExtensionApi.executorBridge.databaseLocationChanged(this.updateStats, this, ctx.subscriptions);
 
         this.itemsList = [this.topItems.loading];
 
@@ -160,7 +160,7 @@ export class OverviewView implements TreeDataProvider<OverviewItem> {
             ? this.topItems.normal
             : this.topItems.notFound;
 
-        const bottomItems = ExtensionApi.executorProcess.getCompileCommandsPath() !== undefined
+        const bottomItems = ExtensionApi.executorBridge.getCompileCommandsPath() !== undefined
             ? this.bottomItems.normal
             : this.bottomItems.ccNotFound;
 

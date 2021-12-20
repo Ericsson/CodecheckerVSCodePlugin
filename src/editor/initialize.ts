@@ -11,7 +11,7 @@ export class FolderInitializer {
 
     async showDialogIfAvailable() {
         if (
-            ExtensionApi.executorProcess.getCompileCommandsPath() === undefined &&
+            ExtensionApi.executorBridge.getCompileCommandsPath() === undefined &&
             workspace.getConfiguration('codechecker.editor').get('showDatabaseDialog') !== false
         ) {
             await this.showDialog();
@@ -25,7 +25,7 @@ export class FolderInitializer {
             return;
         }
 
-        const choiceMessage = ExtensionApi.executorProcess.getCompileCommandsPath() === undefined
+        const choiceMessage = ExtensionApi.executorBridge.getCompileCommandsPath() === undefined
             ? 'Compilation database not found. How would you like to proceed?'
             : 'Would you like to update the compilation database?';
 
@@ -55,7 +55,7 @@ export class FolderInitializer {
             await workspace.fs.createDirectory(codeCheckerFolder);
 
             const terminal = window.createTerminal('CodeChecker');
-            terminal.sendText(ExtensionApi.executorProcess.getLogCmdLine()!, false);
+            terminal.sendText(ExtensionApi.executorBridge.getLogCmdLine()!, false);
             terminal.show(false);
 
             return;
@@ -77,7 +77,7 @@ export class FolderInitializer {
 
         // If initialization failed, show notification again
         if (
-            ExtensionApi.executorProcess.getProcessCmdLine() === undefined &&
+            ExtensionApi.executorBridge.getAnalyzeCmdLine() === undefined &&
             workspace.getConfiguration('codechecker.editor').get('showDatabaseDialog') !== false
         ) {
             await this.showDialog();
