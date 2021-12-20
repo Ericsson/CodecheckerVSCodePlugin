@@ -16,8 +16,8 @@ import { getConfigAndReplaceVariables } from '../../utils/config';
 import { ProcessStatus, ProcessType, ScheduledProcess } from '.';
 
 export class ExecutorBridge implements Disposable {
-    private versionChecked?: boolean;
-    private shownVersionWarning: boolean = false;
+    private versionChecked = false;
+    private shownVersionWarning = false;
 
     private databaseWatches: FileSystemWatcher[] = [];
     private databaseEvents: Disposable[] = [];
@@ -57,6 +57,7 @@ export class ExecutorBridge implements Disposable {
         ctx.subscriptions.push(commands.registerCommand('codechecker.executor.stopAnalysis', this.stopAnalysis, this));
 
         this.updateDatabasePaths();
+        this.checkVersion();
     }
 
     dispose() {
@@ -180,7 +181,7 @@ export class ExecutorBridge implements Disposable {
             ?? 'CodeChecker';
 
         return [
-            `${ccPath} version`,
+            `${ccPath} analyzer-version`,
             '--output "json"',
         ].join(' ');
     }
@@ -200,7 +201,7 @@ export class ExecutorBridge implements Disposable {
     public async selectAndAnalyzeFile(...files: string[]) {
         if (files.length > 0) {
             for (const file of files) {
-                this.analyzeFile(Uri.file(file));
+                await this.analyzeFile(Uri.file(file));
             }
 
             return;
@@ -210,20 +211,24 @@ export class ExecutorBridge implements Disposable {
 
         if (selectedFiles !== undefined) {
             for (const file of selectedFiles) {
-                this.analyzeFile(file);
+                await this.analyzeFile(file);
             }
         }
     }
 
-    public analyzeCurrentFile() {
+    public async analyzeCurrentFile() {
         const currentFile = window.activeTextEditor?.document.uri;
 
         if (currentFile !== undefined) {
-            this.analyzeFile(currentFile);
+            await this.analyzeFile(currentFile);
         }
     }
 
-    public analyzeFile(file: Uri) {
+    public async analyzeFile(file: Uri) {
+        if (!await this.checkVersion()) {
+            return;
+        }
+
         const commandLine = this.getAnalyzeCmdLine(file);
 
         if (commandLine === undefined) {
@@ -235,7 +240,11 @@ export class ExecutorBridge implements Disposable {
         ExtensionApi.executorManager.addToQueue(process, 'prepend');
     }
 
-    public analyzeProject() {
+    public async analyzeProject() {
+        if (!await this.checkVersion()) {
+            return;
+        }
+
         // Kill the process, since the entire project is getting analyzed anyways
         this.stopAnalysis();
 
@@ -258,8 +267,11 @@ export class ExecutorBridge implements Disposable {
         }
     }
 
-    public parseMetadata(...files: Uri[]) {
-        // FIXME: Check CodeChecker version before running
+    public async parseMetadata(...files: Uri[]) {
+        if (!await this.checkVersion()) {
+            return;
+        }
+
         const commandLine = this.getParseCmdLine(...files);
 
         if (commandLine === undefined) {
@@ -282,10 +294,175 @@ export class ExecutorBridge implements Disposable {
         ExtensionApi.executorManager.addToQueue(process, 'replace');
     }
 
+    public async checkVersion(): Promise<boolean> {
+        return new Promise((res, _rej) => {
+            if (this.versionChecked) {
+                res(this.versionChecked);
+                return;
+            }
+
+            const commandLine = this.getVersionCmdLine();
+
+            if (commandLine === undefined) {
+                this._bridgeMessages.fire('>>> Unable to determine CodeChecker version commandline\n');
+
+                this.versionChecked = false;
+                return;
+            }
+
+            const process = new ScheduledProcess(commandLine, { processType: ProcessType.version });
+
+            let processOutput = '';
+
+            process.processStdout((output) => processOutput += output);
+
+            process.processStatusChange(async (status) => {
+                switch (status) {
+                case ProcessStatus.running: return;
+                case ProcessStatus.finished:
+                    try {
+                        // Structure: CodeChecker analyzer version: \n {"Base package version": "M.m.p", ...}
+                        // eslint-disable-next-line @typescript-eslint/naming-convention
+                        const data = JSON.parse(processOutput) as { 'Base package version': string };
+                        // Convert semver to array
+                        const version = data['Base package version'].split('.').map(x => parseInt(x));
+
+                        const minimum = [6, 18, 1];
+
+                        if (version < minimum) {
+                            this._bridgeMessages.fire(`>>> Unsupported CodeChecker version ${version}\n`);
+                            this._bridgeMessages.fire(`>>> Minimum version: ${minimum}\n`);
+
+                            this.versionChecked = false;
+
+                            if (!this.shownVersionWarning) {
+                                this.shownVersionWarning = true;
+                                let choice;
+
+                                while (choice !== 'Close') {
+                                    choice = await window.showWarningMessage(
+                                        `The CodeChecker version you are using (${version.join('.')}) ` +
+                                            `is not supported. (Minimum supported version: ${minimum.join('.')}) ` +
+                                            'Please update to the latest CodeChecker version, ' +
+                                            'or check the extension settings.',
+                                        'Open releases',
+                                        'Installation guide',
+                                        'Open settings',
+                                        'Close'
+                                    );
+
+                                    switch (choice) {
+                                    case 'Open releases':
+                                        commands.executeCommand(
+                                            'vscode.open',
+                                            Uri.parse('https://github.com/ericsson/codechecker/releases')
+                                        );
+                                        break;
+                                    case 'Installation guide':
+                                        commands.executeCommand(
+                                            'vscode.open',
+                                            Uri.parse('https://github.com/ericsson/codechecker#install-guide')
+                                        );
+                                        break;
+                                    case 'Open settings':
+                                        commands.executeCommand(
+                                            'workbench.action.openSettings',
+                                            '@ext:codechecker.codechecker'
+                                        );
+                                        break;
+                                    default:
+                                        choice = 'Close';
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            this._bridgeMessages.fire(`>>> Supported CodeChecker version ${version}, enabled\n`);
+
+                            this.versionChecked = true;
+
+                            if (this.shownVersionWarning) {
+                                this.shownVersionWarning = false;
+
+                                window.showInformationMessage(
+                                    `Found supported CodeChecker version ${version.join('.')}, enabled.`
+                                );
+                            }
+                        }
+                    } catch (err) {
+                        this._bridgeMessages.fire(`>>> Internal error while checking version: ${err}\n`);
+                        this.versionChecked = false;
+
+                        window.showErrorMessage(
+                            'CodeChecker: Internal error while checking version - see logs for details'
+                        );
+                    }
+
+                    break;
+                case ProcessStatus.removed:
+                    if (this.versionChecked === undefined) {
+                        this.versionChecked = false;
+                    }
+
+                    break;
+                default:
+                    this._bridgeMessages.fire('>>> CodeChecker error while checking version\n');
+                    this.versionChecked = false;
+
+                    if (!this.shownVersionWarning) {
+                        this.shownVersionWarning = true;
+                        let choice;
+
+                        while (choice !== 'Close') {
+                            choice = await window.showWarningMessage(
+                                'CodeChecker executable not found. ' +
+                                    'Download CodeChecker, or check the extension settings.',
+                                'Open releases',
+                                'Installation guide',
+                                'Open settings',
+                                'Close'
+                            );
+
+                            switch (choice) {
+                            case 'Open releases':
+                                commands.executeCommand(
+                                    'vscode.open',
+                                    Uri.parse('https://github.com/ericsson/codechecker/releases')
+                                );
+                                break;
+                            case 'Installation guide':
+                                commands.executeCommand(
+                                    'vscode.open',
+                                    Uri.parse('https://github.com/ericsson/codechecker#install-guide')
+                                );
+                                break;
+                            case 'Open settings':
+                                commands.executeCommand(
+                                    'workbench.action.openSettings',
+                                    '@ext:codechecker.codechecker'
+                                );
+                                break;
+                            default:
+                                choice = 'Close';
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                res(this.versionChecked);
+            });
+
+            ExtensionApi.executorManager.addToQueue(process, 'replace');
+        });
+    }
+
     private updateDatabasePaths() {
         if (!workspace.workspaceFolders?.length) {
             return;
         }
+
+        this.versionChecked = false;
 
         const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
 

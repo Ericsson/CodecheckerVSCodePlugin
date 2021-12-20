@@ -76,7 +76,8 @@ export class DiagnosticsApi {
             filesToLoad.push(this._selectedEntry.file);
         }
 
-        ExtensionApi.executorBridge.parseMetadata(...filesToLoad.map(file => Uri.file(file)));
+        ExtensionApi.executorBridge.parseMetadata(...filesToLoad.map(file => Uri.file(file)))
+            .catch(err => console.log(`Internal error in reloadDiagnostics: ${err}`));
     }
 
     // Parses diagnostic data from 'CodeChecker parse'.
