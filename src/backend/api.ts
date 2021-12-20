@@ -1,5 +1,5 @@
 import { ExtensionContext } from 'vscode';
-import { ExecutorBridge as ExecutorBridge, ExecutorManager } from './executor';
+import { ExecutorBridge, ExecutorManager } from './executor';
 import { DiagnosticsApi, MetadataApi } from './processor';
 
 export class ExtensionApi {

@@ -185,7 +185,6 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
             ];
 
             const items = path
-                .filter((/* { pathElem } */) => /* pathElem.depth */ 0 === 0)
                 .map(({ idx }) => {
                     return {
                         ...element,
@@ -196,32 +195,7 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
             return commands.concat(items);
         }
 
-        // Third level, children of reproduction steps
-        // There are inner-depth children
-        if (
-            path[element.reprStep + 1] /* &&
-            path[element.reprStep + 1].pathElem.depth > path[element.reprStep].pathElem.depth */
-        ) {
-            const children = path.slice(element.reprStep + 1);
-
-            /* const startingDepth = path[element.reprStep].pathElem.depth; */
-            /* const childDepth = path[element.reprStep + 1].pathElem.depth; */
-
-            const sameLevelIdx = children.findIndex((/* { pathElem } */) => /* pathElem.depth <= startingDepth */ true);
-
-            const items = children.slice(0, sameLevelIdx)
-                /* .filter(({ pathElem }) => pathElem.depth <= childDepth) */
-                .map(({ idx }) => {
-                    return {
-                        ...element,
-                        reprStep: idx
-                    };
-                });
-
-            return items;
-        }
-
-        // Third level, no inner-depth children
+        // Third level, no inner-depth children without depth data
         return [];
     }
 
@@ -269,7 +243,6 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
         // Second level, repr steps
         const currentStep = steps[element.reprStep];
 
-        // const stepHasChildren = steps[element.reprStep + 1] && currentStep.depth < steps[element.reprStep + 1].depth;
         const currentStepPath = currentReport.file.original_path;
         const currentStepFile = basename(currentStepPath);
 
@@ -277,7 +250,7 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
             `${element.reprStep + 1}. [${currentStepFile}:${currentStep.line}] - ${currentStep.message}`
         );
         item.tooltip = `Full path to file: ${currentStepPath}`;
-        item.collapsibleState = /* stepHasChildren ? TreeItemCollapsibleState.Expanded :*/TreeItemCollapsibleState.None;
+        item.collapsibleState = TreeItemCollapsibleState.None;
         item.command = {
             title: 'jumpToStep',
             command: 'codechecker.editor.jumpToStep',
