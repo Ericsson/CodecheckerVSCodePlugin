@@ -141,12 +141,17 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
                 .filter(([entry, _]) => entry.file.original_path !== this.currentFile?.fsPath)
                 .map(([_, entryIndex]) => { return { entryIndex }; });
 
-            return header
-                .concat(selectedHeader)
-                .concat(currentHeader)
-                .concat(currentItems)
-                .concat(relatedHeader)
-                .concat(relatedItems);
+            let sidebar = header.concat(selectedHeader);
+
+            if (currentItems.length > 0) {
+                sidebar = sidebar.concat(currentHeader, currentItems);
+            }
+
+            if (relatedItems.length > 0) {
+                sidebar = sidebar.concat(relatedHeader, relatedItems);
+            }
+
+            return sidebar;
         }
 
         // Commands have no children
