@@ -1,2 +1,2 @@
-export * from './triggers';
+export * from './bridge';
 export * from './process';

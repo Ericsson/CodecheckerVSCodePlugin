@@ -14,6 +14,7 @@ import { ProcessStatus } from '../backend/executor/process';
 export class ExecutorAlerts {
     private activeToken?: CancellationTokenSource;
     private statusBarItem: StatusBarItem;
+    private enableProgress = true;
 
     constructor(ctx: ExtensionContext) {
         ctx.subscriptions.push(this.statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left));
@@ -21,7 +22,7 @@ export class ExecutorAlerts {
             commands.registerCommand('codechecker.executor.showCommandLine', this.printCmdLine, this)
         );
 
-        ExtensionApi.executorProcess.processStatusChange(this.onStatusChange, this, ctx.subscriptions);
+        ExtensionApi.executorManager.processStatusChange(this.onStatusChange, this, ctx.subscriptions);
 
         this.init();
     }
@@ -33,7 +34,7 @@ export class ExecutorAlerts {
     }
 
     printCmdLine() {
-        const commandLine = ExtensionApi.executorProcess.getProcessCmdLine();
+        const commandLine = ExtensionApi.executorBridge.getAnalyzeCmdLine();
         Editor.loggerPanel.window.appendLine('>>> Full command line:');
         Editor.loggerPanel.window.appendLine(`>>> ${commandLine}`);
 
@@ -41,8 +42,17 @@ export class ExecutorAlerts {
     }
 
     onStatusChange(status: ProcessStatus) {
+        // Do not update when a non-progressbar process was finished
+        if (ExtensionApi.executorManager.activeProcess !== undefined) {
+            this.enableProgress = ExtensionApi.executorManager.activeProcess.processParameters.showProgressBar!;
+        }
+
+        if (!this.enableProgress) {
+            return;
+        }
+
         if (status === ProcessStatus.running) {
-            this.showAlert('CodeChecker: analysis in progress...');
+            this.showProgressbar('CodeChecker: analysis in progress...');
             this.statusBarItem.text = 'CodeChecker: analysis in progress...';
             this.statusBarItem.show();
             return;
@@ -66,11 +76,11 @@ export class ExecutorAlerts {
             break;
         }
 
-        this.hideAlert();
+        this.hideProgressbar();
         this.statusBarItem.show();
     }
 
-    showAlert(message: string) {
+    showProgressbar(message: string) {
         // Clear previous alert, and then create the new progress
         if (this.activeToken !== undefined) {
             this.activeToken.cancel();
@@ -87,14 +97,14 @@ export class ExecutorAlerts {
 
                 cancelButton.onCancellationRequested(() => {
                     // On Cancel button, kill the process
-                    ExtensionApi.executorManager.stopAnalysis();
+                    ExtensionApi.executorBridge.stopAnalysis();
                     res(null);
                 });
             })
         );
     }
 
-    hideAlert() {
+    hideProgressbar() {
         if (this.activeToken !== undefined) {
             this.activeToken.cancel();
             this.activeToken = undefined;

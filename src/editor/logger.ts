@@ -11,8 +11,9 @@ export class LoggerPanel {
             commands.registerCommand('codechecker.logging.showOutput', this.showOutputTab, this)
         );
 
-        ExtensionApi.executorProcess.processStdout(this.window.append, this.window, ctx.subscriptions);
-        ExtensionApi.executorProcess.processStderr(this.window.append, this.window, ctx.subscriptions);
+        ExtensionApi.executorBridge.bridgeMessages(this.window.append, this.window, ctx.subscriptions);
+        ExtensionApi.executorManager.processStdout(this.window.append, this.window, ctx.subscriptions);
+        ExtensionApi.executorManager.processStderr(this.window.append, this.window, ctx.subscriptions);
     }
 
     showOutputTab() {

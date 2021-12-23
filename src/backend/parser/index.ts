@@ -1,2 +1,2 @@
-export * from './diagnostics';
+export * from './parse_result';
 export * from './metadata';

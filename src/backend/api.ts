@@ -1,13 +1,13 @@
 import { ExtensionContext } from 'vscode';
-import { ExecutorManager, ExecutorProcess } from './executor';
+import { ExecutorBridge, ExecutorManager } from './executor';
 import { DiagnosticsApi, MetadataApi } from './processor';
 
 export class ExtensionApi {
     static init(ctx: ExtensionContext): void {
         this._metadata = new MetadataApi(ctx);
-        this._diagnostics = new DiagnosticsApi(ctx);
-        this._executorProcess = new ExecutorProcess(ctx);
         this._executorManager = new ExecutorManager(ctx);
+        this._executorBridge = new ExecutorBridge(ctx);
+        this._diagnostics = new DiagnosticsApi(ctx);
     }
 
     private static _metadata: MetadataApi;
@@ -20,13 +20,13 @@ export class ExtensionApi {
         return this._diagnostics;
     }
 
-    private static _executorProcess: ExecutorProcess;
-    public static get executorProcess() {
-        return this._executorProcess;
-    }
-
     private static _executorManager: ExecutorManager;
     public static get executorManager() {
         return this._executorManager;
+    }
+
+    private static _executorBridge: ExecutorBridge;
+    public static get executorBridge() {
+        return this._executorBridge;
     }
 }
