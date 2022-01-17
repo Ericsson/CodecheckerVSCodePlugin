@@ -30,8 +30,31 @@ jobs:
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
 
-      - name: Publish
+      - name: Create vsix package
         if: success()
-        run: yarn run deploy ${{ steps.get_version.outputs.VERSION }}
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        id: build
+        run: |
+          yarn run vsce package --no-git-tag-version --yarn ${{ steps.get_version.outputs.VERSION }}
+          echo ::set-output name=vsixPath::$(readlink -f *.vsix)
+
+      - name: Create vsix artifact
+        if: success()
+        uses: actions/upload-artifact@master
+        with:
+          name: vsix-package
+          path: ${{ steps.build.outputs.vsixPath }}
+
+      - name: Publish to Open VSX Registry
+        if: success()
+        uses: HaaLeo/publish-vscode-extension@v1
+        with:
+          pat: ${{ secrets.OPEN_VSX_TOKEN }}
+          extensionFile: ${{ steps.build.outputs.vsixPath }}
+
+      - name: Publish to Visual Studio Marketplace
+        if: success()
+        uses: HaaLeo/publish-vscode-extension@v1
+        with:
+          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+          registryUrl: https://marketplace.visualstudio.com
+          extensionFile: ${{ steps.build.outputs.vsixPath }}
