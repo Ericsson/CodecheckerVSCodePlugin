@@ -50,6 +50,7 @@ export class CodeLensStepsProvider implements CodeLensProvider {
 
         for (const [idx, pathItem] of fullPath.entries()) {
             if (pathItem.file.original_path !== document.uri.fsPath) {
+                previousJumpIdx = idx;
                 continue;
             }
 
@@ -90,9 +91,9 @@ export class CodeLensStepsProvider implements CodeLensProvider {
                         previousJumpIdx
                     ]
                 }));
-
-                previousJumpIdx = idx;
             }
+
+            previousJumpIdx = idx;
 
             if (idx < fullPath.length - 1) {
                 codeLenses.push(new CodeLens(range, {
