@@ -10,7 +10,7 @@ This is a C/C++ code analysis plugin for VSCode that shows bug reports detected 
 
 ## Quick Start
 
-1. [Install CodeChecker], and optionally add it to the `PATH` environment variable.
+1. [Install CodeChecker] version 6.18.1 or later, and optionally add it to the `PATH` environment variable.
 2. Install the CodeChecker extension from the [Visual Studio Marketplace], from [Open VSX], or download manually from [Downloads].
 3. Check the path to CodeChecker, and set your preferred command-line arguments - see [Configuring CodeChecker] for more information.
 4. Open your project, and run an analysis, or browse through the found reports!
@@ -39,7 +39,7 @@ This is a C/C++ code analysis plugin for VSCode that shows bug reports detected 
 
 ## Configuring CodeChecker
 
-The extension uses the CodeChecker executable, `CodeChecker` by default. If your installation is different, or CodeChecker is not in the the `PATH` environment variable, the path to it can be set manually under `Preferences > Settings > Extensions > CodeChecker > Executable path`.
+The extension uses Codechecker version 6.18.1 or later. If your installation path is different, or CodeChecker is not in the the `PATH` environment variable, the path to it can be set manually under `Preferences > Settings > Extensions > CodeChecker > Executable path`.
 
 The extension can run a CodeChecker analysis on your project, either when saving a file, or when using one of the `CodeChecker: Analyze` commands. You can stop the analysis by clicking the *Cancel* button on CodeChecker's notification - partial results are saved automatically.
 
