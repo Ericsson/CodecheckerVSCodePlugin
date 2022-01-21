@@ -1,30 +1,53 @@
 # CodeChecker VSCode Plugin
 
-This is a C/C++ code analysis plugin for VSCode that shows bugs detected by the [Clang Static Analyzer] and [Clang Tidy] analyzers, using [CodeChecker] as a backend.
+This is a C/C++ code analysis plugin for VSCode that shows bug reports detected by the [Clang Static Analyzer] and [Clang Tidy] analyzers, using [CodeChecker] as a backend.
 
 [Clang Static Analyzer]: http://clang-analyzer.llvm.org/
 [Clang Tidy]: http://clang.llvm.org/extra/clang-tidy/
 [CodeChecker]: https://github.com/Ericsson/codechecker
 
+![CodeChecker extension](media/codechecker-splash.png)
+
 ## Quick Start
 
-1. [Install CodeChecker](https://github.com/Ericsson/CodeChecker#install-guide).
-2. [Install the CodeChecker extension for Visual Studio Code](https://github.com/Ericsson/CodeCheckerVSCodePlugin/releases).
-3. [Run a CodeChecker analysis on your project](https://github.com/Ericsson/codechecker/blob/master/docs/usage.md).
-4. Open your project, and browse through the found reports!
+1. [Install CodeChecker] version 6.18.1 or later, and optionally add it to the `PATH` environment variable.
+2. Install the CodeChecker extension from the [Visual Studio Marketplace], from [Open VSX], or download manually from [Downloads].
+3. Check the path to CodeChecker, and set your preferred command-line arguments - see [Configuring CodeChecker] for more information.
+4. Open your project, and run an analysis, or browse through the found reports!
+
+[Install CodeChecker]: https://github.com/Ericsson/CodeChecker#install-guide
+[Visual Studio Marketplace]: https://marketplace.visualstudio.com/items?itemName=codechecker.codechecker
+[Open VSX]: https://open-vsx.org/extension/codechecker/codechecker
+[Downloads]: https://github.com/Ericsson/CodecheckerVSCodePlugin/releases
+[Configuring CodeChecker]: #configuring-codechecker
 
 ## Features
 
-This is an early development version, and features are constantly being added.  
-Once a core set of features is implemented, this section will be populated!
+- Browse through the found reports, and show the reproduction steps directly in the code
+- Navigate between the reproduction steps (`F9`/`Shift-F9` by default)
 
-## Automatic CodeChecker analysis
+![Showcase of repr steps](media/codechecker-repr-step.gif)
 
-The extension supports *automatic analysis* of changed files. When you save a file, or use one of the `CodeChecker: Analyze` commands, CodeChecker starts an analysis in the background. You can *stop the analysis* by clicking the *Cancel* button on CodeChecker's notification - partial results are saved automatically.
+- Run a CodeChecker analysis from the editor, and see the results automatically
+- Re-analyze the current file when saved (can be disabled in Settings)
 
-The analysis is fully configurable, and the resulting CodeChecker command line can be previewed with the `CodeChecker: Show full command line` command (for supported arguments, run `CodeChecker analyze --help`). Automatic analysis on saving can be configured as well.
+![File analysis](media/codechecker-analysis.gif)
 
-You can view the output of previous CodeChecker analyses by clicking CodeChecker in the status bar, or using the `CodeChecker: Show Output` command.
+- Commands and build tasks for running CodeChecker as part of a build system
+
+![Commands and tasks](media/codechecker-tasks.gif)
+
+## Configuring CodeChecker
+
+The extension uses Codechecker version 6.18.1 or later. If your installation path is different, or CodeChecker is not in the the `PATH` environment variable, the path to it can be set manually under `Preferences > Settings > Extensions > CodeChecker > Executable path`.
+
+The extension can run a CodeChecker analysis on your project, either when saving a file, or when using one of the `CodeChecker: Analyze` commands. You can stop the analysis by clicking the *Cancel* button on CodeChecker's notification - partial results are saved automatically.
+
+The analysis is fully configurable, and the resulting CodeChecker command line can be previewed with the `CodeChecker: Show full command line` command (for supported arguments, run `CodeChecker analyze --help`). Settings for the current workspace can be set on the *Workspace* tab in the Settings. Automatic analysis on saving can be configured as well.
+
+Detailed information about the configuration options can be found under [Settings].
+
+[Settings]: #settings
 
 ## Commands and tasks
 
