@@ -248,13 +248,13 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
         // Second level, repr steps
         const currentStep = steps[element.reprStep];
 
-        const currentStepPath = currentReport.file.original_path;
-        const currentStepFile = basename(currentStepPath);
+        const currentStepFilePath = currentStep.file.original_path;
+        const currentStepFileName = basename(currentStepFilePath);
 
         const item = new TreeItem(
-            `${element.reprStep + 1}. [${currentStepFile}:${currentStep.line}] - ${currentStep.message}`
+            `${element.reprStep + 1}. [${currentStepFileName}:${currentStep.line}] - ${currentStep.message}`
         );
-        item.tooltip = `Full path to file: ${currentStepPath}`;
+        item.tooltip = `Full path to file: ${currentStepFilePath}`;
         item.collapsibleState = TreeItemCollapsibleState.None;
         item.command = {
             title: 'jumpToStep',
