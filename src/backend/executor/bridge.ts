@@ -15,6 +15,19 @@ import { ExtensionApi } from '../api';
 import { getConfigAndReplaceVariables } from '../../utils/config';
 import { ProcessStatus, ProcessType, ScheduledProcess } from '.';
 
+// Structure:
+//   CodeChecker analyzer version: \n {"base_package_version": "M.m.p", ...}
+//
+// Before CodeChecker 6.19.0 the output looked like this:
+//   CodeChecker analyzer version: \n {"Base package version": "M.m.p", ...}
+interface AnalyzerVersion {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    'Base package version': string,
+
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    'base_package_version': string,
+}
+
 export class ExecutorBridge implements Disposable {
     private versionChecked = false;
     private shownVersionWarning = false;
@@ -321,11 +334,13 @@ export class ExecutorBridge implements Disposable {
                 case ProcessStatus.running: return;
                 case ProcessStatus.finished:
                     try {
-                        // Structure: CodeChecker analyzer version: \n {"Base package version": "M.m.p", ...}
+                        const data = JSON.parse(processOutput) as AnalyzerVersion;
+
                         // eslint-disable-next-line @typescript-eslint/naming-convention
-                        const data = JSON.parse(processOutput) as { 'Base package version': string };
+                        const package_version = data['base_package_version'] || data['Base package version'];
+
                         // Convert semver to array
-                        const version = data['Base package version'].split('.').map(x => parseInt(x));
+                        const version = package_version.split('.').map(x => parseInt(x));
 
                         const minimum = [6, 18, 1];
 
