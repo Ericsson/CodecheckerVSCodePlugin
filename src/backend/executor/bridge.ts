@@ -342,7 +342,7 @@ export class ExecutorBridge implements Disposable {
                         // Convert semver to array
                         const version = package_version.split('.').map(x => parseInt(x));
 
-                        const minimum = [6, 18, 1];
+                        const minimum = [6, 18, 2];
 
                         if (version < minimum) {
                             this._bridgeMessages.fire(`>>> Unsupported CodeChecker version ${version}\n`);
