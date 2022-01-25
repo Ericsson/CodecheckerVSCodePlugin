@@ -7,8 +7,26 @@ on:
 
 jobs:
   build:
-    name: Build and publish extension
+    name: Create extension
     runs-on: ubuntu-18.04
+
+    # Each registry should have the following fields:
+    #   - name: unique extension id.
+    #   - registryUrl: the created vsix package will be published to this registry.
+    #   - token: github secret name which will be used to publish the created package.
+    strategy:
+      matrix:
+        registry: [open-vsx, vs-marketplace]
+        include:
+          - registry: open-vsx
+            name: codechecker
+            registryUrl: https://open-vsx.org
+            token: OPEN_VSX_TOKEN
+          - registry: vs-marketplace
+            name: vscode-codechecker
+            registryUrl: https://marketplace.visualstudio.com
+            token: VS_MARKETPLACE_TOKEN
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -34,6 +52,7 @@ jobs:
         if: success()
         id: build
         run: |
+          sed -i 's/"name": "codechecker"/"name": "${{ matrix.name }}"/' package.json
           yarn run vsce package --no-git-tag-version --yarn ${{ steps.get_version.outputs.VERSION }}
           echo ::set-output name=vsixPath::$(readlink -f *.vsix)
 
@@ -41,20 +60,13 @@ jobs:
         if: success()
         uses: actions/upload-artifact@master
         with:
-          name: vsix-package
+          name: ${{ matrix.registry }}-package
           path: ${{ steps.build.outputs.vsixPath }}
 
-      - name: Publish to Open VSX Registry
+      - name: Publish package
         if: success()
         uses: HaaLeo/publish-vscode-extension@v1
         with:
-          pat: ${{ secrets.OPEN_VSX_TOKEN }}
-          extensionFile: ${{ steps.build.outputs.vsixPath }}
-
-      - name: Publish to Visual Studio Marketplace
-        if: success()
-        uses: HaaLeo/publish-vscode-extension@v1
-        with:
-          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
-          registryUrl: https://marketplace.visualstudio.com
+          pat: ${{ secrets[matrix.token] }}
+          registryUrl: ${{ matrix.registryUrl }}
           extensionFile: ${{ steps.build.outputs.vsixPath }}
