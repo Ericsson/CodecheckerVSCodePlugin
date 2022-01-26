@@ -12,8 +12,9 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 import { ExtensionApi } from '../api';
-import { getConfigAndReplaceVariables } from '../../utils/config';
+import { getConfigAndReplaceVariables, replaceVariables } from '../../utils/config';
 import { ProcessStatus, ProcessType, ScheduledProcess } from '.';
+import { parse } from 'shell-quote';
 
 // Structure:
 //   CodeChecker analyzer version: \n {"base_package_version": "M.m.p", ...}
@@ -121,18 +122,22 @@ export class ExecutorBridge implements Disposable {
         return undefined;
     }
 
-    public getAnalyzeCmdLine(...files: Uri[]): string | undefined {
+    public getAnalyzeCmdArgs(...files: Uri[]): string[] | undefined {
         if (!workspace.workspaceFolders?.length) {
             return undefined;
         }
 
         // TODO: Refactor for less code repetition across functions
-        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath')
-            ?? 'CodeChecker';
         const reportsFolder = this.getReportsFolder();
-        const ccArguments = getConfigAndReplaceVariables('codechecker.executor', 'arguments') ?? '';
-        const ccThreads = workspace.getConfiguration('codechecker.executor').get<string>('threadCount');
 
+        const ccArgumentsSetting = workspace.getConfiguration('codechecker.executor').get<string|string[]>('arguments');
+        const ccArguments = typeof ccArgumentsSetting === 'string'
+            ? parse(ccArgumentsSetting).filter((entry) => typeof entry === 'string') as string[]
+            : ccArgumentsSetting
+                ?.map((arg) => replaceVariables(arg))
+                .filter((arg) => arg !== undefined) as string[] ?? [];
+
+        const ccThreads = workspace.getConfiguration('codechecker.executor').get<string>('threadCount');
         const ccCompileCmd = this.getCompileCommandsPath();
 
         if (ccCompileCmd === undefined) {
@@ -141,28 +146,29 @@ export class ExecutorBridge implements Disposable {
         }
 
         const filePaths = files.length
-            ? `--file ${files.map((uri) => `"${uri.fsPath}"`).join(' ')}`
-            : '';
+            ? ['--file', ...files.map((uri) => uri.fsPath)]
+            : [];
 
-        return [
-            `${ccPath} analyze`,
-            `"${ccCompileCmd}"`,
-            `--output "${reportsFolder}"`,
-            `${ccThreads ? '-j ' + ccThreads : ''}`,
-            `${ccArguments}`,
-            `${filePaths}`,
-        ].join(' ');
+        const args = [
+            'analyze', ccCompileCmd,
+            '--output', reportsFolder,
+        ];
+
+        if (ccThreads) {
+            args.push('-j', ccThreads);
+        }
+
+        args.push(...ccArguments, ...filePaths);
+
+        return args;
     }
 
-    public getLogCmdLine(): string | undefined {
+    public getLogCmdArgs(): string[] | undefined {
         if (!workspace.workspaceFolders?.length) {
             return undefined;
         }
 
         const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
-
-        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath')
-            ?? 'CodeChecker';
         const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
             ?? path.join(workspaceFolder, '.codechecker');
 
@@ -170,40 +176,36 @@ export class ExecutorBridge implements Disposable {
         const ccCompileCmd = path.join(ccFolder, 'compile_commands.json');
 
         return [
-            `${ccPath} log`,
-            `--output "${ccCompileCmd}"`,
-            '--build "make"'
-        ].join(' ');
+            'log',
+            '--output', ccCompileCmd,
+            '--build', 'make'
+        ];
     }
 
-    public getParseCmdLine(...files: Uri[]): string | undefined {
+    public getParseCmdArgs(...files: Uri[]): string[] | undefined {
         if (!workspace.workspaceFolders?.length) {
             return undefined;
         }
 
-        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') ?? 'CodeChecker';
         const reportsFolder = this.getReportsFolder();
 
         const filePaths = files.length
-            ? `--file ${files.map((uri) => `"${uri.fsPath}"`).join(' ')}`
-            : '';
+            ? ['--file', ...files.map((uri) => uri.fsPath)]
+            : [];
 
         return [
-            `${ccPath} parse`,
-            `${reportsFolder}`,
-            '-e json',
-            filePaths
-        ].join(' ');
+            'parse',
+            reportsFolder,
+            '-e', 'json',
+            ...filePaths
+        ];
     }
 
-    public getVersionCmdLine(): string | undefined {
-        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath')
-            ?? 'CodeChecker';
-
+    public getVersionCmdArgs(): string[] | undefined {
         return [
-            `${ccPath} analyzer-version`,
-            '--output "json"',
-        ].join(' ');
+            'analyzer-version',
+            '--output', 'json',
+        ];
     }
 
     private analyzeOnSave() {
@@ -249,13 +251,14 @@ export class ExecutorBridge implements Disposable {
             return;
         }
 
-        const commandLine = this.getAnalyzeCmdLine(file);
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') ?? 'CodeChecker';
+        const commandArgs = this.getAnalyzeCmdArgs(file);
 
-        if (commandLine === undefined) {
+        if (commandArgs === undefined) {
             return;
         }
 
-        const process = new ScheduledProcess(commandLine, { processType: ProcessType.analyze });
+        const process = new ScheduledProcess(ccPath, commandArgs, { processType: ProcessType.analyze });
 
         ExtensionApi.executorManager.addToQueue(process, 'prepend');
     }
@@ -268,13 +271,14 @@ export class ExecutorBridge implements Disposable {
         // Kill the process, since the entire project is getting analyzed anyways
         this.stopAnalysis();
 
-        const commandLine = this.getAnalyzeCmdLine();
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') ?? 'CodeChecker';
+        const commandArgs = this.getAnalyzeCmdArgs();
 
-        if (commandLine === undefined) {
+        if (commandArgs === undefined) {
             return;
         }
 
-        const process = new ScheduledProcess(commandLine, { processType: ProcessType.analyze });
+        const process = new ScheduledProcess(ccPath, commandArgs, { processType: ProcessType.analyze });
 
         ExtensionApi.executorManager.addToQueue(process, 'replace');
     }
@@ -292,13 +296,14 @@ export class ExecutorBridge implements Disposable {
             return;
         }
 
-        const commandLine = this.getParseCmdLine(...files);
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') ?? 'CodeChecker';
+        const commandArgs = this.getParseCmdArgs(...files);
 
-        if (commandLine === undefined) {
+        if (commandArgs === undefined) {
             return;
         }
 
-        const process = new ScheduledProcess(commandLine, { processType: ProcessType.parse });
+        const process = new ScheduledProcess(ccPath, commandArgs, { processType: ProcessType.parse });
 
         // TODO: Find a better way to collect full logger output
         let processOutput = '';
@@ -321,16 +326,17 @@ export class ExecutorBridge implements Disposable {
                 return;
             }
 
-            const commandLine = this.getVersionCmdLine();
+            const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') ?? 'CodeChecker';
+            const commandArgs = this.getVersionCmdArgs();
 
-            if (commandLine === undefined) {
+            if (commandArgs === undefined) {
                 this._bridgeMessages.fire('>>> Unable to determine CodeChecker version commandline\n');
 
                 this.versionChecked = false;
                 return;
             }
 
-            const process = new ScheduledProcess(commandLine, { processType: ProcessType.version });
+            const process = new ScheduledProcess(ccPath, commandArgs, { processType: ProcessType.version });
 
             let processOutput = '';
 

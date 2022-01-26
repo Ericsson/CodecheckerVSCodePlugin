@@ -1,4 +1,5 @@
 import * as child_process from 'child_process';
+import { quote } from 'shell-quote';
 import { Disposable, Event, EventEmitter, ExtensionContext, workspace } from 'vscode';
 
 export enum ProcessStatus {
@@ -30,8 +31,18 @@ export interface ProcessParameters {
 }
 
 export class ScheduledProcess implements Disposable {
-    /** Full command line of the scheduled process. */
-    public readonly commandLine: string;
+    /** Command line of the executed process.
+     * Note: In the executed command line, each argument is passed separately, so no need to escape individual args.
+     */
+    public get commandLine() {
+        return quote([
+            this.executable,
+            ...this.commandArgs
+        ]);
+    };
+
+    public readonly executable: string;
+    public readonly commandArgs: string[];
 
     private activeProcess?: child_process.ChildProcess;
 
@@ -72,14 +83,16 @@ export class ScheduledProcess implements Disposable {
         return this._processStatusChange.event;
     }
 
-    constructor(commandLine: string, parameters: ProcessParameters) {
-        this.commandLine = commandLine;
-        this.processParameters = parameters;
+    constructor(executable: string, commandArgs?: string[], parameters?: ProcessParameters) {
+        this.executable = executable;
+        this.commandArgs = commandArgs ?? [];
+        this.processParameters = parameters ?? {};
 
+        const processType = parameters?.processType ?? '';
         const forwardDefaults: string[] = [ ProcessType.parse ];
 
         if (this.processParameters.forwardStdoutToLogs === undefined) {
-            this.processParameters.forwardStdoutToLogs = !forwardDefaults.includes(parameters.processType ?? '');
+            this.processParameters.forwardStdoutToLogs = !forwardDefaults.includes(processType);
         }
     }
 
@@ -110,7 +123,7 @@ export class ScheduledProcess implements Disposable {
 
         this._processStderr.fire(`>>> Starting process '${commonName}'\n`);
         this._processStderr.fire(`> ${this.commandLine}\n`);
-        this.activeProcess = child_process.spawn(this.commandLine, { shell: true });
+        this.activeProcess = child_process.spawn(this.executable, this.commandArgs);
 
         this.activeProcess.stdout!.on('data', (stdout: Buffer) => {
             const decoded = stdout.toString();
