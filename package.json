@@ -82,10 +82,17 @@
     "configuration": {
       "title": "CodeChecker",
       "properties": {
+        "codechecker.executor.executablePath": {
+          "type": "string",
+          "description": "Path to CodeChecker's executable",
+          "default": "CodeChecker",
+          "order": 1
+        },
         "codechecker.backend.outputFolder": {
           "type": "string",
           "description": "Output folder for CodeChecker's analysis files",
-          "default": "${workspaceFolder}/.codechecker"
+          "default": "${workspaceFolder}/.codechecker",
+          "order": 2
         },
         "codechecker.backend.databasePath": {
           "type": [
@@ -93,7 +100,24 @@
             "null"
           ],
           "description": "Path to a custom compilation database, in case of a custom build system",
-          "default": null
+          "default": null,
+          "order": 3
+        },
+        "codechecker.executor.arguments": {
+          "type": "string",
+          "description": "Additional arguments to CodeChecker analyze command. For supported arguments, run `CodeChecker analyze --help`. The command `CodeChecker: Show full command line` command shows the resulting command line.",
+          "default": "",
+          "order": 4
+        },
+        "codechecker.executor.threadCount": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "CodeChecker's thread count - leave empty to use all threads",
+          "default": null,
+          "minimum": 1,
+          "order": 5
         },
         "codechecker.editor.showDatabaseDialog": {
           "type": "boolean",
@@ -104,25 +128,6 @@
           "type": "boolean",
           "description": "Enable CodeLens for displaying the reproduction path",
           "default": true
-        },
-        "codechecker.executor.executablePath": {
-          "type": "string",
-          "description": "Path to CodeChecker's executable",
-          "default": "CodeChecker"
-        },
-        "codechecker.executor.arguments": {
-          "type": "string",
-          "description": "Additional arguments to CodeChecker. For supported arguments, run `CodeChecker analyze --help`. The command `CodeChecker: Show full command line` command shows the resulting command line.",
-          "default": ""
-        },
-        "codechecker.executor.threadCount": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "description": "CodeChecker's thread count - leave empty to use all threads",
-          "default": null,
-          "minimum": 1
         },
         "codechecker.executor.runOnSave": {
           "type": "boolean",
