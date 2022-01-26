@@ -132,7 +132,7 @@ export class ExecutorBridge implements Disposable {
 
         const ccArgumentsSetting = workspace.getConfiguration('codechecker.executor').get<string>('arguments');
         const ccArguments = parse(ccArgumentsSetting ?? '')
-            .filter((entry) => typeof entry === 'string')
+            .filter((entry) => typeof entry === 'string' && entry.length > 0)
             .map((entry) => replaceVariables(entry as string)!);
 
         const ccThreads = workspace.getConfiguration('codechecker.executor').get<string>('threadCount');
