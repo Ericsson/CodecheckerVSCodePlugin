@@ -16,7 +16,7 @@ This is a C/C++ code analysis plugin for VSCode that shows bug reports detected 
 4. Open your project, and run an analysis, or browse through the found reports!
 
 [Install CodeChecker]: https://github.com/Ericsson/CodeChecker#install-guide
-[Visual Studio Marketplace]: https://marketplace.visualstudio.com/items?itemName=codechecker.codechecker
+[Visual Studio Marketplace]: https://marketplace.visualstudio.com/items?itemName=codechecker.vscode-codechecker
 [Open VSX]: https://open-vsx.org/extension/codechecker/codechecker
 [Downloads]: https://github.com/Ericsson/CodecheckerVSCodePlugin/releases
 [Configuring CodeChecker]: #configuring-codechecker
