@@ -55,8 +55,13 @@ export class FolderInitializer {
             await workspace.fs.createDirectory(codeCheckerFolder);
 
             const terminal = window.createTerminal('CodeChecker');
-            terminal.sendText(ExtensionApi.executorBridge.getLogCmdLine()!, false);
             terminal.show(false);
+
+            // Wait some time until the terminal is initialized properly. For now there is no elegant solution to solve
+            // this problem than using setTimeout.
+            setTimeout(() => {
+                terminal.sendText(ExtensionApi.executorBridge.getLogCmdLine()!, false);
+            }, 1000);
 
             return;
         case 'Locate':
