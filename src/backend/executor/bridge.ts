@@ -484,10 +484,17 @@ export class ExecutorBridge implements Disposable {
         const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
             ?? path.join(workspaceFolder, '.codechecker');
 
+        // It will try to find compilation databases in these directories automatically. The order is important because
+        // the first finding will be used.
+        const dbRootDirPaths = [ccFolder, workspaceFolder, path.join(workspaceFolder, 'build')];
+        const dbFileNames = ['compile_commands.json', 'compile_cmd.json'];
+
         this.databasePaths = [
             getConfigAndReplaceVariables('codechecker.backend', 'databasePath'),
-            path.join(ccFolder, 'compile_commands.json'),
-            path.join(ccFolder, 'compile_cmd.json')
+            ...dbRootDirPaths.reduce((dbFilePaths: string[], dirName: string) => {
+                dbFileNames.forEach(fileName => dbFilePaths.push(path.join(dirName, fileName)));
+                return dbFilePaths;
+            }, [])
         ];
 
         this.databaseEvents.forEach(watch => watch.dispose());
