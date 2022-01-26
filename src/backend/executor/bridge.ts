@@ -130,12 +130,10 @@ export class ExecutorBridge implements Disposable {
         // TODO: Refactor for less code repetition across functions
         const reportsFolder = this.getReportsFolder();
 
-        const ccArgumentsSetting = workspace.getConfiguration('codechecker.executor').get<string|string[]>('arguments');
-        const ccArguments = typeof ccArgumentsSetting === 'string'
-            ? parse(ccArgumentsSetting).filter((entry) => typeof entry === 'string') as string[]
-            : ccArgumentsSetting
-                ?.map((arg) => replaceVariables(arg))
-                .filter((arg) => arg !== undefined) as string[] ?? [];
+        const ccArgumentsSetting = workspace.getConfiguration('codechecker.executor').get<string>('arguments');
+        const ccArguments = parse(ccArgumentsSetting ?? '')
+            .filter((entry) => typeof entry === 'string')
+            .map((entry) => replaceVariables(entry as string)!);
 
         const ccThreads = workspace.getConfiguration('codechecker.executor').get<string>('threadCount');
         const ccCompileCmd = this.getCompileCommandsPath();

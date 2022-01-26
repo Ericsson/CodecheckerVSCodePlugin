@@ -95,10 +95,7 @@
           "order": 2
         },
         "codechecker.backend.compilationDatabasePath": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": "string",
           "description": "Path to a custom compilation database, in case of a custom build system",
           "default": null,
           "order": 3
