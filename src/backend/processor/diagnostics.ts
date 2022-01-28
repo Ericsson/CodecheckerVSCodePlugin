@@ -70,7 +70,7 @@ export class DiagnosticsApi {
 
     public reloadDiagnostics() {
         // TODO: Allow loading all diagnostics at once
-        const filesToLoad = this._openedFiles;
+        const filesToLoad = [...this._openedFiles];
 
         if (this._selectedEntry) {
             filesToLoad.push(this._selectedEntry.file);
