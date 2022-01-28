@@ -16,7 +16,7 @@ import { ExtensionApi } from '../../backend/api';
 import { DiagnosticReport } from '../../backend/types';
 
 export interface IssueMetadata {
-    entryIndex?: number;
+    entryIndex?: number | 'sticky';
     reprStep?: number;
     reprHasChildren?: boolean;
     description?: string;
@@ -87,20 +87,14 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
             }
 
             return [];
-        // Special case: No reports in current file
-        } else if ((this.currentEntryList?.length ?? 0) === 0) {
-            if (element === undefined) {
-                return [{ description: `No reports found in file ${basename(this.currentFile.fsPath)}` }];
-            }
-
-            return [];
         }
 
         // First level, report list
         if (element?.entryIndex === undefined) {
-            const reportsText = this.currentEntryList!.length === 1
+            const entryCount = this.currentEntryList?.length ?? 0;
+            const reportsText = entryCount === 1
                 ? '1 report'
-                : `${this.currentEntryList!.length} reports`;
+                : `${entryCount === 0 ? 'No' : entryCount} reports`;
 
             const header: IssueMetadata[] = [
                 { description: `${reportsText} found in file ${basename(this.currentFile!.fsPath)}` }
@@ -121,6 +115,20 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
                 ];
             }
 
+            const stickyHeader: IssueMetadata[] = [
+                { description: '——' },
+                { description: 'Active reproduction steps:' }
+            ];
+
+            const stickyItems: IssueMetadata[] = [];
+
+            // When in the same file as the sticky, displays as part of In current file
+            if (
+                ExtensionApi.diagnostics.selectedEntry &&
+                ExtensionApi.diagnostics.selectedEntry.position.file !== this.currentFile.fsPath) {
+                stickyItems.push({ entryIndex: 'sticky' });
+            }
+
             const currentHeader: IssueMetadata[] = [
                 { description: '——' },
                 { description: 'In the current file:' }
@@ -131,24 +139,14 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
                 .filter(([entry, _]) => entry.file.original_path === this.currentFile?.fsPath)
                 .map(([_, entryIndex]) => { return { entryIndex }; });
 
-            const relatedHeader: IssueMetadata[] = [
-                { description: '——' },
-                { description: 'In related files:' }
-            ];
-
-            const relatedItems = this.currentEntryList!
-                .map((entry, idx): [DiagnosticReport, number] => [entry, idx])
-                .filter(([entry, _]) => entry.file.original_path !== this.currentFile?.fsPath)
-                .map(([_, entryIndex]) => { return { entryIndex }; });
-
             let sidebar = header.concat(selectedHeader);
+
+            if (stickyItems.length > 0) {
+                sidebar = sidebar.concat(stickyHeader, stickyItems);
+            }
 
             if (currentItems.length > 0) {
                 sidebar = sidebar.concat(currentHeader, currentItems);
-            }
-
-            if (relatedItems.length > 0) {
-                sidebar = sidebar.concat(relatedHeader, relatedItems);
             }
 
             return sidebar;
@@ -159,35 +157,73 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
             return [];
         }
 
-        const path = this.currentEntryList![element.entryIndex].bug_path_events
+        const entry = element.entryIndex === 'sticky'
+            ? ExtensionApi.diagnostics.selectedEntry?.diagnostic
+            : this.currentEntryList![element.entryIndex];
+
+        // No children of sticky when there's no selected report
+        if (entry === undefined) {
+            return [];
+        }
+
+        const path = entry.bug_path_events
             .map((pathElem, idx) => { return { idx, pathElem }; });
 
         // Second level, reproduction steps
         if (element.reprStep === undefined) {
-            const selectedPosition = ExtensionApi.diagnostics.selectedEntry?.position;
-            const isActiveReport = selectedPosition?.idx === element.entryIndex;
+            const commands: IssueMetadata[] = [];
 
-            const commands: IssueMetadata[] = [
-                {
-                    ...element,
-                    description: 'Jump to report',
-                    command: {
-                        title: 'jumpToReport',
-                        command: 'codechecker.editor.jumpToReport',
-                        arguments: [this.currentFile, element.entryIndex, true]
-                    }
-                },
-                {
-                    ...element,
-                    description: `${isActiveReport ? 'Hide' : 'Show'} reproduction steps`,
-                    command: {
-                        title: 'toggleSteps',
-                        command: 'codechecker.editor.toggleSteps',
-                        arguments: [this.currentFile, element.entryIndex]
-                    }
-                },
-                { ...element, description: '——' }
-            ];
+            // Sticky has a different indexing method
+            if (element.entryIndex === 'sticky') {
+                const { file, idx } = ExtensionApi.diagnostics.selectedEntry!.position;
+
+                commands.push(
+                    {
+                        ...element,
+                        description: 'Jump to report',
+                        command: {
+                            title: 'jumpToReport',
+                            command: 'codechecker.editor.jumpToReport',
+                            arguments: [file, idx, true]
+                        }
+                    },
+                    {
+                        ...element,
+                        description: 'Hide reproduction steps',
+                        command: {
+                            title: 'toggleSteps',
+                            command: 'codechecker.editor.toggleSteps',
+                            arguments: [file, idx]
+                        }
+                    },
+                    { ...element, description: '——' }
+                );
+            } else {
+                const selectedPosition = ExtensionApi.diagnostics.selectedEntry?.position;
+                const isActiveReport = selectedPosition?.idx === element.entryIndex;
+
+                commands.push(
+                    {
+                        ...element,
+                        description: 'Jump to report',
+                        command: {
+                            title: 'jumpToReport',
+                            command: 'codechecker.editor.jumpToReport',
+                            arguments: [this.currentFile, element.entryIndex, true]
+                        }
+                    },
+                    {
+                        ...element,
+                        description: `${isActiveReport ? 'Hide' : 'Show'} reproduction steps`,
+                        command: {
+                            title: 'toggleSteps',
+                            command: 'codechecker.editor.toggleSteps',
+                            arguments: [this.currentFile, element.entryIndex]
+                        }
+                    },
+                    { ...element, description: '——' }
+                );
+            }
 
             const items = path
                 .map(({ idx }) => {
@@ -223,7 +259,20 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
             return new TreeItem('Internal error - invalid node');
         }
 
-        const currentReport = this.currentEntryList![element.entryIndex];
+        const currentReport = element.entryIndex === 'sticky'
+            ? ExtensionApi.diagnostics.selectedEntry?.diagnostic
+            : this.currentEntryList![element.entryIndex];
+
+        // No children of sticky when there's no selected report
+        if (currentReport === undefined) {
+            return new TreeItem('Loading... - reload metadata if this does not disappear');
+        }
+
+        const isSticky = element.entryIndex === 'sticky' || (
+            this.currentFile?.fsPath === ExtensionApi.diagnostics.selectedEntry?.position.file &&
+            element.entryIndex === ExtensionApi.diagnostics.selectedEntry?.position.idx
+        );
+
         const steps = currentReport.bug_path_events;
 
         // First level, report list
@@ -235,7 +284,9 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
                 : `[${basename(currentReportPath)}:${currentReport.line}]`;
 
             const item = new TreeItem(`${fileDescription} - ${currentReport.message}`);
-            item.collapsibleState = TreeItemCollapsibleState.Collapsed;
+            item.collapsibleState = isSticky
+                ? TreeItemCollapsibleState.Expanded
+                : TreeItemCollapsibleState.Collapsed;
             item.description = `(${steps.length})`;
 
             if (currentReportPath !== this.currentFile?.fsPath) {
@@ -256,11 +307,23 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
         );
         item.tooltip = `Full path to file: ${currentStepFilePath}`;
         item.collapsibleState = TreeItemCollapsibleState.None;
-        item.command = {
-            title: 'jumpToStep',
-            command: 'codechecker.editor.jumpToStep',
-            arguments: [this.currentFile, element.entryIndex, element.reprStep, true]
-        };
+
+        // Sticky has a different indexing method
+        if (element.entryIndex === 'sticky') {
+            const { file, idx } = ExtensionApi.diagnostics.selectedEntry!.position;
+
+            item.command = {
+                title: 'jumpToStep',
+                command: 'codechecker.editor.jumpToStep',
+                arguments: [file, idx, element.reprStep, true]
+            };
+        } else {
+            item.command = {
+                title: 'jumpToStep',
+                command: 'codechecker.editor.jumpToStep',
+                arguments: [this.currentFile, element.entryIndex, element.reprStep, true]
+            };
+        }
 
         return item;
     }
