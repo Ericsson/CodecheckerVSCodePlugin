@@ -21,8 +21,7 @@ export enum ProcessType {
 export interface ProcessParameters {
     /** Default: true, false when type is parse */
     forwardStdoutToLogs?: boolean,
-    /** Default: true, false when type is parse or version */
-    showProgressBar?: boolean,
+
     /**
      * Name of the process, preferred to be one of ProcessType.
      * Default: other
@@ -78,14 +77,9 @@ export class ScheduledProcess implements Disposable {
         this.processParameters = parameters;
 
         const forwardDefaults: string[] = [ ProcessType.parse ];
-        const progressDefaults: string[] = [ ProcessType.parse, ProcessType.version ];
 
         if (this.processParameters.forwardStdoutToLogs === undefined) {
             this.processParameters.forwardStdoutToLogs = !forwardDefaults.includes(parameters.processType ?? '');
-        }
-
-        if (this.processParameters.showProgressBar === undefined) {
-            this.processParameters.showProgressBar = !progressDefaults.includes(parameters.processType ?? '');
         }
     }
 
