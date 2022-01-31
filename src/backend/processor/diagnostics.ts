@@ -76,6 +76,14 @@ export class DiagnosticsApi {
             filesToLoad.push(this._selectedEntry.file);
         }
 
+        // Unload reports without calling parse
+        if (filesToLoad.length === 0) {
+            this._diagnosticEntries = new Map();
+            this._diagnosticsUpdated.fire();
+
+            return;
+        }
+
         ExtensionApi.executorBridge.parseMetadata(...filesToLoad.map(file => Uri.file(file)))
             .catch((err: any) => console.log(`Internal error in reloadDiagnostics: ${err}`));
     }
@@ -143,9 +151,20 @@ export class DiagnosticsApi {
     }
 
     private onDocumentsChanged(event: TextEditor[]): void {
-        this._openedFiles = event.map(editor => editor.document.uri.fsPath);
+        const newFiles = event
+            // Filters out the Output tab's extra events
+            .filter(editor => editor.document.uri.scheme !== 'output')
+            .map(editor => editor.document.uri.fsPath)
+            .sort();
 
-        this.reloadDiagnostics();
+        // Only reload diagnostics when files are changed
+        if (
+            this._openedFiles.length !== newFiles.length ||
+            this._openedFiles.some((filePath, idx) => filePath !== newFiles[idx])
+        ) {
+            this._openedFiles = newFiles;
+            this.reloadDiagnostics();
+        }
     }
 
     private onMetadataUpdated(_metadata: CheckerMetadata | undefined) {
