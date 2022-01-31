@@ -283,7 +283,7 @@ export class ReportsView implements TreeDataProvider<IssueMetadata> {
                 ? `[L${currentReport.line}]`
                 : `[${basename(currentReportPath)}:${currentReport.line}]`;
 
-            const item = new TreeItem(`${fileDescription} - ${currentReport.message}`);
+            const item = new TreeItem(`${fileDescription} - ${currentReport.message} [${currentReport.checker_name}]`);
             item.collapsibleState = isSticky
                 ? TreeItemCollapsibleState.Expanded
                 : TreeItemCollapsibleState.Collapsed;
