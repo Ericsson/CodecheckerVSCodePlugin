@@ -45,23 +45,23 @@ export class ExecutorAlerts {
         }
 
         if (status === ProcessStatus.running) {
-            this.statusBarItem.text = 'CodeChecker: analysis in progress...';
+            this.statusBarItem.text = '$(loading) CodeChecker: analysis in progress...';
             this.statusBarItem.show();
             return;
         }
 
         switch (status) {
         case ProcessStatus.finished:
-            this.statusBarItem.text = 'CodeChecker: analysis finished';
+            this.statusBarItem.text = '$(testing-passed-icon) CodeChecker: analysis finished';
             break;
         case ProcessStatus.killed:
-            this.statusBarItem.text = 'CodeChecker: analysis killed';
+            this.statusBarItem.text = '$(testing-failed-icon) CodeChecker: analysis killed';
             break;
         case ProcessStatus.notRunning:
-            this.statusBarItem.text = 'CodeChecker: ready';
+            this.statusBarItem.text = '$(info) CodeChecker: ready';
             break;
         case ProcessStatus.errored:
-            this.statusBarItem.text = 'CodeChecker: analysis errored';
+            this.statusBarItem.text = '$(testing-error-icon) CodeChecker: analysis errored';
             window.showErrorMessage('CodeChecker finished with error - see logs for details');
             break;
         default:
