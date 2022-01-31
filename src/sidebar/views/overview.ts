@@ -106,6 +106,14 @@ export class OverviewView implements TreeDataProvider<OverviewItem> {
                     command: 'codechecker.executor.analyzeProject',
                 }
             ),
+            new OverviewItem(
+                'Stop analysis',
+                'debug-stop',
+                {
+                    title: 'stopAnalysis',
+                    command: 'codechecker.executor.stopAnalysis',
+                }
+            ),
         ],
         'ccNotFound': [
             new OverviewItem(
