@@ -57,6 +57,12 @@ export class ExecutorBridge implements Disposable {
 
         workspace.onDidSaveTextDocument(this.analyzeOnSave, this, ctx.subscriptions);
         workspace.onDidChangeConfiguration(this.updateDatabasePaths, this, ctx.subscriptions);
+        workspace.onDidChangeConfiguration((e) => {
+            // Check the version only if the CodeChecker executable path is changed.
+            if (!e.affectsConfiguration('codechecker.executor')) { return; }
+
+            this.checkVersion();
+        }, this, ctx.subscriptions);
 
         ctx.subscriptions.push(
             commands.registerCommand('codechecker.executor.analyzeCurrentFile', this.analyzeCurrentFile, this)
