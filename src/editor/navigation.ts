@@ -97,7 +97,7 @@ export class NavigationHandler {
 
         for (const [idx, path] of reprPath.entries()) {
             // Check location first
-            if (window.activeTextEditor.document.uri.fsPath !== entry.file.original_path) {
+            if (window.activeTextEditor.document.uri.fsPath !== path.file.original_path) {
                 continue;
             }
 
@@ -119,8 +119,8 @@ export class NavigationHandler {
             const range = new Range(
                 path.range.start_line-1,
                 path.range.start_col-1,
-                path.range.start_line-1,
-                path.range.start_col,
+                path.range.end_line-1,
+                path.range.end_col,
             );
 
             if (range.contains(cursor)) {
@@ -148,7 +148,7 @@ export class NavigationHandler {
         if (stepIdx < reprPath.length - 1) {
             const step = reprPath[stepIdx + 1];
 
-            window.showTextDocument(Uri.file(entry.file.original_path), {
+            window.showTextDocument(Uri.file(step.file.original_path), {
                 selection: new Range(
                     step.line - 1,
                     step.column - 1,
@@ -172,7 +172,7 @@ export class NavigationHandler {
         if (stepIdx > 0) {
             const step = reprPath[stepIdx - 1];
 
-            window.showTextDocument(Uri.file(entry.file.original_path), {
+            window.showTextDocument(Uri.file(step.file.original_path), {
                 selection: new Range(
                     step.line - 1,
                     step.column - 1,
