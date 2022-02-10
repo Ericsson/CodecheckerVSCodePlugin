@@ -70,7 +70,7 @@ export class FolderInitializer {
                 break;
             }
 
-            workspace.getConfiguration('codechecker.backend').update('databasePath', filePath[0].fsPath);
+            workspace.getConfiguration('codechecker.backend').update('compilationDatabasePath', filePath[0].fsPath);
             return;
         case 'Don\'t show again':
             workspace.getConfiguration('codechecker.editor').update('showDatabaseDialog', false);
