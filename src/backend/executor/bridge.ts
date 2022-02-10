@@ -34,7 +34,7 @@ export class ExecutorBridge implements Disposable {
 
     private databaseWatches: FileSystemWatcher[] = [];
     private databaseEvents: Disposable[] = [];
-    private databasePaths: (string | undefined)[] = [];
+    private compilationDatabasePaths: (string | undefined)[] = [];
 
     /** Every line should have a newline at the end */
     private _bridgeMessages: EventEmitter<string> = new EventEmitter();
@@ -56,7 +56,7 @@ export class ExecutorBridge implements Disposable {
         ctx.subscriptions.push(this);
 
         workspace.onDidSaveTextDocument(this.analyzeOnSave, this, ctx.subscriptions);
-        workspace.onDidChangeConfiguration(this.updateDatabasePaths, this, ctx.subscriptions);
+        workspace.onDidChangeConfiguration(this.updateCompilationDatabasePaths, this, ctx.subscriptions);
         workspace.onDidChangeConfiguration((e) => {
             // Check the version only if the CodeChecker executable path is changed.
             if (!e.affectsConfiguration('codechecker.executor')) { return; }
@@ -75,7 +75,7 @@ export class ExecutorBridge implements Disposable {
         );
         ctx.subscriptions.push(commands.registerCommand('codechecker.executor.stopAnalysis', this.stopAnalysis, this));
 
-        this.updateDatabasePaths();
+        this.updateCompilationDatabasePaths();
         this.checkVersion();
     }
 
@@ -85,7 +85,8 @@ export class ExecutorBridge implements Disposable {
     }
 
     /**
-     * `updateDatabasePaths` should be run at least once before calling this function, to initialize the database paths.
+     * `updateCompilationDatabasePaths` should be run at least once before calling this function, to initialize the
+     * database paths.
      * Otherwise, it will return undefined.
      */
     public getCompileCommandsPath() {
@@ -93,7 +94,7 @@ export class ExecutorBridge implements Disposable {
             return undefined;
         }
 
-        for (const filePath of this.databasePaths) {
+        for (const filePath of this.compilationDatabasePaths) {
             if (filePath && fs.existsSync(filePath)) {
                 this._bridgeMessages.fire(`>>> Database found at path: ${filePath}\n`);
                 // TODO: Cache the result and only update on eg. watch change
@@ -102,7 +103,7 @@ export class ExecutorBridge implements Disposable {
         }
 
         this._bridgeMessages.fire('>>> No database found in the following paths:\n');
-        for (const filePath of this.databasePaths) {
+        for (const filePath of this.compilationDatabasePaths) {
             if (filePath) {
                 this._bridgeMessages.fire(`>>>   ${filePath}\n`);
             } else {
@@ -478,7 +479,7 @@ export class ExecutorBridge implements Disposable {
         });
     }
 
-    private updateDatabasePaths() {
+    private updateCompilationDatabasePaths() {
         if (!workspace.workspaceFolders?.length) {
             return;
         }
@@ -495,8 +496,8 @@ export class ExecutorBridge implements Disposable {
         const dbRootDirPaths = [ccFolder, workspaceFolder, path.join(workspaceFolder, 'build')];
         const dbFileNames = ['compile_commands.json', 'compile_cmd.json'];
 
-        this.databasePaths = [
-            getConfigAndReplaceVariables('codechecker.backend', 'databasePath'),
+        this.compilationDatabasePaths = [
+            getConfigAndReplaceVariables('codechecker.backend', 'compilationDatabasePath'),
             ...dbRootDirPaths.reduce((dbFilePaths: string[], dirName: string) => {
                 dbFileNames.forEach(fileName => dbFilePaths.push(path.join(dirName, fileName)));
                 return dbFilePaths;
@@ -506,7 +507,7 @@ export class ExecutorBridge implements Disposable {
         this.databaseEvents.forEach(watch => watch.dispose());
         this.databaseWatches.forEach(watch => watch.dispose());
 
-        this.databaseWatches = this.databasePaths
+        this.databaseWatches = this.compilationDatabasePaths
             .filter(x => x !== undefined)
             .map(path => workspace.createFileSystemWatcher(path!));
 

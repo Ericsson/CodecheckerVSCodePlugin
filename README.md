@@ -80,7 +80,7 @@ Since CodeChecker-related paths vary greatly between systems, the following sett
 | Name | Description |
 | --- | --- |
 | CodeChecker > Backend > Output folder <br> (default: `${workspaceFolder}/.codechecker`) | The output folder where the CodeChecker analysis files are stored. |
-| CodeChecker > Backend > Database path <br> (default: *(empty)*) | Path to a custom compilation database, in case of a custom build system. The database setup dialog sets the path for the current workspace only. |
+| CodeChecker > Backend > Compilation database path <br> (default: *(empty)*) | Path to a custom compilation database, in case of a custom build system. The database setup dialog sets the path for the current workspace only. |
 | CodeChecker > Editor > Show database dialog <br> (default: `on`) | Controls the dialog when opening a workspace without a compilation database. |
 | CodeChecker > Editor > Enable CodeLens <br> (default: `on`) | Enable CodeLens for displaying the reproduction path in the editor. |
 | CodeChecker > Executor > Executable path <br> (default: `CodeChecker`) |  Path to the CodeChecker executable (can be an executable in the `PATH` environment variable). |

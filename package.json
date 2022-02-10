@@ -94,7 +94,7 @@
           "default": "${workspaceFolder}/.codechecker",
           "order": 2
         },
-        "codechecker.backend.databasePath": {
+        "codechecker.backend.compilationDatabasePath": {
           "type": [
             "string",
             "null"
