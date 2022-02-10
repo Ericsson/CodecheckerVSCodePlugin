@@ -105,7 +105,7 @@
         },
         "codechecker.executor.arguments": {
           "type": "string",
-          "description": "Additional arguments to CodeChecker analyze command. For supported arguments, run `CodeChecker analyze --help`. The command `CodeChecker: Show full command line` command shows the resulting command line.",
+          "description": "Additional arguments to CodeChecker analyze command. For example, if you want to use a config file for CodeChecker pass '--config <config.json>'. For supported arguments, run `CodeChecker analyze --help`. The command `CodeChecker: Show full command line` command shows the resulting command line.",
           "default": "",
           "order": 4
         },
