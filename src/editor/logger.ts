@@ -17,7 +17,10 @@ export class LoggerPanel {
     }
 
     showOutputTab() {
+        // Hiding and re-showing the window resets the auto-scroll state.
         this.window.hide();
-        this.window.show(false);
+
+        // setTimeout is needed to make sure Theia will show the correct output channel.
+        setTimeout(() => this.window.show(false), 0);
     }
 }
