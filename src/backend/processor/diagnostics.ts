@@ -150,7 +150,7 @@ export class DiagnosticsApi {
         return this._diagnosticsUpdated.event;
     }
 
-    private onDocumentsChanged(event: TextEditor[]): void {
+    private onDocumentsChanged(event: readonly TextEditor[]): void {
         const newFiles = event
             // Filters out the Output tab's extra events
             .filter(editor => editor.document.uri.scheme !== 'output')
