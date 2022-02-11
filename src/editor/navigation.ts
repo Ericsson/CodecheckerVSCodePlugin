@@ -93,6 +93,8 @@ export class NavigationHandler {
         const entry = ExtensionApi.diagnostics.selectedEntry.diagnostic;
         const reprPath = entry.bug_path_events;
 
+        // The cursor is on the bug's original jump location
+        let isExactPosition = false;
         let foundIdx = null;
 
         for (const [idx, path] of reprPath.entries()) {
@@ -103,6 +105,7 @@ export class NavigationHandler {
 
             if (cursor.isEqual(new Position(path.line-1, path.column-1))) {
                 foundIdx = idx;
+                isExactPosition = true;
 
                 if (which === 'first') {
                     break;
@@ -111,8 +114,8 @@ export class NavigationHandler {
                 continue;
             }
 
-            // Check inside the ranges
-            if (!path.range) {
+            // Check inside the ranges, but only if no exact match was found
+            if (!path.range || isExactPosition) {
                 continue;
             }
 
