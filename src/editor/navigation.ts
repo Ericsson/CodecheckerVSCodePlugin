@@ -104,18 +104,21 @@ export class NavigationHandler {
             }
 
             if (cursor.isEqual(new Position(path.line-1, path.column-1))) {
+                // Set the first result if there's no exact-position match yet,
+                // or always set the last result
+                if ((which === 'first' && isExactPosition)) {
+                    continue;
+                }
+
                 foundIdx = idx;
                 isExactPosition = true;
-
-                if (which === 'first') {
-                    break;
-                }
 
                 continue;
             }
 
-            // Check inside the ranges, but only if no exact match was found
-            if (!path.range || isExactPosition) {
+            // Set the first result if there's a range, there's nothing found yet,
+            // or set the last result if there's no exact-position match yet
+            if (!path.range || (which === 'first' && foundIdx !== null) || isExactPosition) {
                 continue;
             }
 
@@ -128,10 +131,6 @@ export class NavigationHandler {
 
             if (range.contains(cursor)) {
                 foundIdx = idx;
-
-                if (which === 'first') {
-                    break;
-                }
             }
         }
 
