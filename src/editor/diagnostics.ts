@@ -12,9 +12,47 @@ import {
     window
 } from 'vscode';
 import { ExtensionApi } from '../backend/api';
-import { DiagnosticPathEvent, DiagnosticReport } from '../backend/types';
+import { DiagnosticReport } from '../backend/types';
 
 // TODO: implement api
+
+// Get diagnostics severity for the given CodeChecker severity.
+function getDiagnosticSeverity(severity: string): DiagnosticSeverity {
+    if (severity === 'STYLE') {
+        return DiagnosticSeverity.Information;
+    }
+    return DiagnosticSeverity.Error;
+}
+
+// Get diagnostic related information for the given report.
+// eslint-disable-next-line no-unused-vars
+function getRelatedInformation(report: DiagnosticReport): DiagnosticRelatedInformation[] {
+    const items = [];
+    for (const [idx, event] of report.bug_path_events.entries()) {
+        items.push(new DiagnosticRelatedInformation(
+            new Location(
+                Uri.file(event.file.original_path),
+                new Position(event.line - 1, event.column - 1)
+            ),
+            `${idx + 1}. ${event.message}`
+        ));
+    }
+    return items;
+}
+
+function getDiagnostic(report: DiagnosticReport): Diagnostic {
+    const severity = report.severity || 'UNSPECIFIED';
+
+    return {
+        message: `[${severity}] ${report.message} [${report.checker_name}]`,
+        range: new Range(report.line - 1, report.column - 1, report.line - 1, report.column - 1),
+        // FIXME: for now it's not possible to attach custom commands to related informations. Later if it will be
+        // available through the VSCode API we can show related information here.
+        // relatedInformation: getRelatedInformation(report),
+        severity: getDiagnosticSeverity(severity),
+        source: 'CodeChecker',
+    };
+}
 
 export class DiagnosticRenderer {
     private _diagnosticCollection: DiagnosticCollection;
@@ -41,118 +79,10 @@ export class DiagnosticRenderer {
     // TODO: Implement CancellableToken
     updateAllDiagnostics(): void {
         const diagnosticMap: Map<string, Diagnostic[]> = new Map();
-
-        const makeRelatedInformation = (
-            entry: DiagnosticReport | DiagnosticPathEvent,
-            message: string
-        ): DiagnosticRelatedInformation => {
-            const file = entry.file.original_path;
-
-            return new DiagnosticRelatedInformation(
-                new Location(Uri.file(file), new Position(entry.line-1, entry.column-1)),
-                message
-            );
+        const updateDiagnosticMap = (report: DiagnosticReport) => {
+            const file = Uri.file(report.file.original_path);
+            diagnosticMap.get(file.toString())?.push(getDiagnostic(report));
         };
-
-        const renderDiagnosticItem = (
-            entry: DiagnosticReport,
-            renderedDiag: DiagnosticPathEvent,
-            severity: DiagnosticSeverity,
-            relatedInformation: DiagnosticRelatedInformation[]
-        ): boolean => {
-            const affectedFile = Uri.file(renderedDiag.file.original_path);
-
-            // When there's no ranges, render the location
-            const range = renderedDiag.range
-                ? new Range(
-                    renderedDiag.range.start_line-1,
-                    renderedDiag.range.start_col-1,
-                    renderedDiag.range.end_line-1,
-                    renderedDiag.range.end_col,
-                ) : new Range(
-                    renderedDiag.line-1,
-                    renderedDiag.column-1,
-                    renderedDiag.line-1,
-                    renderedDiag.column
-                );
-
-            const diagnostics = diagnosticMap.get(affectedFile.toString()) ?? [];
-
-            const finalDiag: Diagnostic = {
-                message: renderedDiag.message,
-                range,
-                relatedInformation,
-                severity,
-                source: 'CodeChecker',
-            };
-
-            diagnostics.push(finalDiag);
-
-            diagnosticMap.set(affectedFile.toString(), diagnostics);
-            return false;
-        };
-
-        const renderErrorsInFile = (diagnosticData: DiagnosticReport[]) => {
-            // Render source diagnostics
-            for (const entry of diagnosticData) {
-                if (entry === ExtensionApi.diagnostics.selectedEntry?.diagnostic) {
-                    // render later, with the reproduction path
-                    continue;
-                }
-
-                const errorDiag = entry.bug_path_events.find(elem => elem.message === entry.message);
-
-                const entryFile = entry.file.original_path;
-
-                // File is opened
-                if (errorDiag !== undefined && this._openedFiles.some(file => file.fsPath === entryFile)) {
-                    renderDiagnosticItem(entry, errorDiag, DiagnosticSeverity.Error, []);
-                }
-            }
-        };
-
-        const renderReproductionPath = (entry: DiagnosticReport) => {
-            const fullPath = [...entry.bug_path_events];
-
-            if (fullPath.length > 0) {
-                const errorDiag = fullPath.pop()!;
-
-                // Render corresponding error
-                {
-                    const relatedInformation: DiagnosticRelatedInformation[] = fullPath.length > 0
-                        ? [
-                            makeRelatedInformation(fullPath[0], 'first reproduction step'),
-                            makeRelatedInformation(
-                                fullPath[fullPath.length - 1],
-                                'last reproduction step'
-                            )
-                        ]
-                        : [];
-
-                    renderDiagnosticItem(entry, errorDiag, DiagnosticSeverity.Error, relatedInformation);
-                }
-
-                // Render reproduction path
-                for (const [idx, pathItem] of fullPath.entries()) {
-                    const relatedInformation: DiagnosticRelatedInformation[] = [];
-
-                    if (idx > 0) {
-                        relatedInformation.push(
-                            makeRelatedInformation(fullPath[idx - 1], 'previous reproduction step')
-                        );
-                    }
-                    if (idx < fullPath.length - 2) {
-                        relatedInformation.push(
-                            makeRelatedInformation(fullPath[idx + 1], 'next reproduction step')
-                        );
-                    }
-                    relatedInformation.push(makeRelatedInformation(errorDiag, 'original report'));
-
-                    renderDiagnosticItem(entry, pathItem, DiagnosticSeverity.Information, relatedInformation);
-                }
-            }
-        };
-
 
         // Update "regular" errors in files
         for (const uri of this._openedFiles) {
@@ -161,14 +91,17 @@ export class DiagnosticRenderer {
             }
         }
 
-        const fileErrors = ExtensionApi.diagnostics.getFileDiagnostics(
+        const reports = ExtensionApi.diagnostics.getFileDiagnostics(
             ...this._openedFiles.filter(uri => ExtensionApi.diagnostics.dataExistsForFile(uri))
         );
-        renderErrorsInFile(fileErrors);
 
-        // Render reproduction path, if applicable
-        if (ExtensionApi.diagnostics.selectedEntry !== undefined) {
-            renderReproductionPath(ExtensionApi.diagnostics.selectedEntry.diagnostic);
+        for (const report of reports) {
+            updateDiagnosticMap(report);
+        }
+
+        const selectedDiagnostic = ExtensionApi.diagnostics.selectedEntry?.diagnostic;
+        if (selectedDiagnostic && !reports.includes(selectedDiagnostic)) {
+            updateDiagnosticMap(selectedDiagnostic);
         }
 
         // Freshly pushed files become _lastOpenedFiles
