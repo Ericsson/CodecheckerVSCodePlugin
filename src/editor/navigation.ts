@@ -93,42 +93,44 @@ export class NavigationHandler {
         const entry = ExtensionApi.diagnostics.selectedEntry.diagnostic;
         const reprPath = entry.bug_path_events;
 
+        // The cursor is on the bug's original jump location
+        let isExactPosition = false;
         let foundIdx = null;
 
         for (const [idx, path] of reprPath.entries()) {
             // Check location first
-            if (window.activeTextEditor.document.uri.fsPath !== entry.file.original_path) {
+            if (window.activeTextEditor.document.uri.fsPath !== path.file.original_path) {
                 continue;
             }
 
             if (cursor.isEqual(new Position(path.line-1, path.column-1))) {
-                foundIdx = idx;
-
-                if (which === 'first') {
-                    break;
+                // Set the first result if there's no exact-position match yet,
+                // or always set the last result
+                if ((which === 'first' && isExactPosition)) {
+                    continue;
                 }
+
+                foundIdx = idx;
+                isExactPosition = true;
 
                 continue;
             }
 
-            // Check inside the ranges
-            if (!path.range) {
+            // Set the first result if there's a range, there's nothing found yet,
+            // or set the last result if there's no exact-position match yet
+            if (!path.range || (which === 'first' && foundIdx !== null) || isExactPosition) {
                 continue;
             }
 
             const range = new Range(
                 path.range.start_line-1,
                 path.range.start_col-1,
-                path.range.start_line-1,
-                path.range.start_col,
+                path.range.end_line-1,
+                path.range.end_col,
             );
 
             if (range.contains(cursor)) {
                 foundIdx = idx;
-
-                if (which === 'first') {
-                    break;
-                }
             }
         }
 
@@ -148,7 +150,7 @@ export class NavigationHandler {
         if (stepIdx < reprPath.length - 1) {
             const step = reprPath[stepIdx + 1];
 
-            window.showTextDocument(Uri.file(entry.file.original_path), {
+            window.showTextDocument(Uri.file(step.file.original_path), {
                 selection: new Range(
                     step.line - 1,
                     step.column - 1,
@@ -172,7 +174,7 @@ export class NavigationHandler {
         if (stepIdx > 0) {
             const step = reprPath[stepIdx - 1];
 
-            window.showTextDocument(Uri.file(entry.file.original_path), {
+            window.showTextDocument(Uri.file(step.file.original_path), {
                 selection: new Range(
                     step.line - 1,
                     step.column - 1,
