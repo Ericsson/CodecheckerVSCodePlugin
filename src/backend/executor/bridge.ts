@@ -84,6 +84,13 @@ export class ExecutorBridge implements Disposable {
         this.databaseWatches.forEach(watch => watch.dispose());
     }
 
+    public getReportsFolder(): string {
+        const workspaceFolder = workspace.workspaceFolders![0].uri.fsPath;
+        const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
+            ?? path.join(workspaceFolder, '.codechecker');
+        return path.join(ccFolder, 'reports');
+    }
+
     /**
      * `updateCompilationDatabasePaths` should be run at least once before calling this function, to initialize the
      * database paths.
@@ -120,12 +127,9 @@ export class ExecutorBridge implements Disposable {
         }
 
         // TODO: Refactor for less code repetition across functions
-        const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
-
         const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath')
             ?? 'CodeChecker';
-        const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
-            ?? path.join(workspaceFolder, '.codechecker');
+        const reportsFolder = this.getReportsFolder();
         const ccArguments = getConfigAndReplaceVariables('codechecker.executor', 'arguments') ?? '';
         const ccThreads = workspace.getConfiguration('codechecker.executor').get<string>('threadCount');
 
@@ -143,7 +147,7 @@ export class ExecutorBridge implements Disposable {
         return [
             `${ccPath} analyze`,
             `"${ccCompileCmd}"`,
-            `--output "${ccFolder}"`,
+            `--output "${reportsFolder}"`,
             `${ccThreads ? '-j ' + ccThreads : ''}`,
             `${ccArguments}`,
             `${filePaths}`,
@@ -177,12 +181,8 @@ export class ExecutorBridge implements Disposable {
             return undefined;
         }
 
-        const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
-
-        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath')
-            ?? 'CodeChecker';
-        const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
-            ?? path.join(workspaceFolder, '.codechecker');
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') ?? 'CodeChecker';
+        const reportsFolder = this.getReportsFolder();
 
         const filePaths = files.length
             ? `--file ${files.map((uri) => `"${uri.fsPath}"`).join(' ')}`
@@ -190,7 +190,7 @@ export class ExecutorBridge implements Disposable {
 
         return [
             `${ccPath} parse`,
-            `${ccFolder}`,
+            `${reportsFolder}`,
             '-e json',
             filePaths
         ].join(' ');

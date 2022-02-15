@@ -10,6 +10,7 @@ import {
     window,
     workspace
 } from 'vscode';
+import * as path from 'path';
 import { parseMetadata } from '../parser';
 import { CheckerMetadata } from '../types';
 
@@ -71,7 +72,8 @@ export class MetadataApi implements Disposable {
     private updateMetadataPath() {
         this.disposeWatcher();
 
-        this.metadataPath = workspace.getConfiguration('codechecker.backend').get<string>('outputFolder');
+        const ccFolder = workspace.getConfiguration('codechecker.backend').get<string>('outputFolder');
+        this.metadataPath = ccFolder && path.join(ccFolder, 'reports');
 
         if (this.metadataPath && workspace.workspaceFolders?.length) {
             const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
