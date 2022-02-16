@@ -8,6 +8,7 @@ import {
     Range,
     TextDocument,
     languages,
+    window,
     workspace
 } from 'vscode';
 import { ExtensionApi } from '../backend';
@@ -23,6 +24,13 @@ export class CodeLensStepsProvider implements CodeLensProvider {
         );
 
         ctx.subscriptions.push(languages.registerCodeLensProvider('*', this));
+
+        workspace.onDidChangeTextDocument(({ document }) => {
+            const editor = window.activeTextEditor;
+            if (document.uri.fsPath === editor?.document.uri.fsPath) {
+                this._onDidChangeCodeLenses.fire();
+            }
+        });
     }
 
     private _onDidChangeCodeLenses: EventEmitter<void>;
@@ -31,8 +39,11 @@ export class CodeLensStepsProvider implements CodeLensProvider {
     }
 
     provideCodeLenses(document: TextDocument, _token: CancellationToken): CodeLens[] {
-        if (ExtensionApi.diagnostics.selectedEntry === undefined ||
-            !workspace.getConfiguration('codechecker.editor').get('enableCodeLens')) {
+        if (
+            ExtensionApi.diagnostics.selectedEntry === undefined ||
+            !workspace.getConfiguration('codechecker.editor').get('enableCodeLens') ||
+            document.isDirty
+        ) {
             return [];
         }
 

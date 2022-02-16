@@ -7,10 +7,12 @@ import {
     Location,
     Position,
     Range,
+    TextEditor,
     ThemeColor,
     Uri,
     languages,
-    window
+    window,
+    workspace
 } from 'vscode';
 import { ExtensionApi } from '../backend/api';
 import { DiagnosticReport } from '../backend/types';
@@ -73,6 +75,18 @@ export class DiagnosticRenderer {
         ctx.subscriptions.push(this._diagnosticCollection = languages.createDiagnosticCollection('codechecker'));
 
         ExtensionApi.diagnostics.diagnosticsUpdated(this.onDiagnosticUpdated, this, ctx.subscriptions);
+
+        workspace.onDidChangeTextDocument(({ document }) => {
+            // Clear bug step decorations when there are unpersisted changes in the current active text editor.
+            const editor = window.activeTextEditor;
+            if (document.uri.fsPath === editor?.document.uri.fsPath) {
+                if (document.isDirty) {
+                    this.clearBugStepDecorations(editor);
+                } else {
+                    this.highlightActiveBugStep();
+                }
+            }
+        });
     }
 
     onDiagnosticUpdated() {
@@ -87,6 +101,10 @@ export class DiagnosticRenderer {
         this.highlightActiveBugStep();
     }
 
+    clearBugStepDecorations(editor: TextEditor) {
+        editor.setDecorations(reportStepDecorationType, []);
+    }
+
     highlightActiveBugStep() {
         const editor = window.activeTextEditor;
         if (!editor) {
@@ -94,9 +112,10 @@ export class DiagnosticRenderer {
         }
 
         const diagnostic = ExtensionApi.diagnostics.selectedEntry?.diagnostic;
-        if (!diagnostic) {
-            // Hide report step decorations when no report step is selected.
-            editor.setDecorations(reportStepDecorationType, []);
+        if (!diagnostic || editor.document.isDirty) {
+            // Hide report step decorations when no report step is selected
+            // or there are unpersisted changes in the document.
+            this.clearBugStepDecorations(editor);
             return;
         }
 
