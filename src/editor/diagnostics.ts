@@ -7,12 +7,22 @@ import {
     Location,
     Position,
     Range,
+    ThemeColor,
     Uri,
     languages,
     window
 } from 'vscode';
 import { ExtensionApi } from '../backend/api';
 import { DiagnosticReport } from '../backend/types';
+
+// Decoration type for highlighting report step positions.
+const reportStepDecorationType = window.createTextEditorDecorationType({
+    backgroundColor: new ThemeColor('codechecker.highlightBugReportPoints.background'),
+    borderColor: new ThemeColor('codechecker.highlightBugReportPoints.border'),
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderRadius: '2px',
+});
 
 // TODO: implement api
 
@@ -74,6 +84,34 @@ export class DiagnosticRenderer {
         }
 
         this.updateAllDiagnostics();
+        this.highlightActiveBugStep();
+    }
+
+    highlightActiveBugStep() {
+        const editor = window.activeTextEditor;
+        if (!editor) {
+            return;
+        }
+
+        const diagnostic = ExtensionApi.diagnostics.selectedEntry?.diagnostic;
+        if (!diagnostic) {
+            // Hide report step decorations when no report step is selected.
+            editor.setDecorations(reportStepDecorationType, []);
+            return;
+        }
+
+        // Decorate report steps.
+        const ranges = diagnostic.bug_path_positions.reduce((prev: Range[], curr) => {
+            if (curr.file.original_path === editor.document.uri.fsPath) {
+                const range = curr.range;
+                prev.push(new Range(
+                    new Position(range.start_line - 1, range.start_col - 1),
+                    new Position(range.end_line - 1, range.end_col)
+                ));
+            }
+            return prev;
+        }, []);
+        editor.setDecorations(reportStepDecorationType, ranges);
     }
 
     // TODO: Implement CancellableToken

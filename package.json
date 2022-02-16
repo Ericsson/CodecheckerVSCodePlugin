@@ -198,7 +198,27 @@
           "when": "codechecker.sidebar.showReports"
         }
       ]
-    }
+    },
+    "colors": [
+      {
+        "id": "codechecker.highlightBugReportPoints.background",
+        "description": "Color for highlighting bug report points.",
+        "defaults": {
+          "dark": "#00000000",
+          "light": "#eeb",
+          "highContrast": "#00000000"
+        }
+      },
+      {
+        "id": "codechecker.highlightBugReportPoints.border",
+        "description": "Border color for highlighting bug report points.",
+        "defaults": {
+          "dark": "#eeb",
+          "light": "#e07a16",
+          "highContrast": "#eeb"
+        }
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "yarn run package",
