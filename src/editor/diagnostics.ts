@@ -50,12 +50,31 @@ function getRelatedInformation(report: DiagnosticReport): DiagnosticRelatedInfor
     return items;
 }
 
+// This function will return a range for the given report.
+function getRange(report: DiagnosticReport) {
+    const startLine = report.line - 1;
+    const endLine = startLine;
+    const startColumn = report.column - 1;
+    let endColumn = startColumn;
+
+    // Get better range position from the visible text editors if there is any.
+    const editor = window.visibleTextEditors.find(e => e.document.uri.fsPath === report.file.original_path);
+    if (editor) {
+        const range = editor.document.getWordRangeAtPosition(new Position(startLine, startColumn));
+        if (range?.isSingleLine && startColumn < range?.end.character) {
+            endColumn = range.end.character;
+        }
+    }
+
+    return new Range(startLine, report.column - 1, endLine, endColumn);
+}
+
 function getDiagnostic(report: DiagnosticReport): Diagnostic {
     const severity = report.severity || 'UNSPECIFIED';
 
     return {
         message: `[${severity}] ${report.message} [${report.checker_name}]`,
-        range: new Range(report.line - 1, report.column - 1, report.line - 1, report.column - 1),
+        range: getRange(report),
         // FIXME: for now it's not possible to attach custom commands to related informations. Later if it will be
         // available through the VSCode API we can show related information here.
         // relatedInformation: getRelatedInformation(report),
