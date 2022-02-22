@@ -84,7 +84,7 @@
       "properties": {
         "codechecker.executor.executablePath": {
           "type": "string",
-          "description": "Path to CodeChecker's executable",
+          "description": "Path to CodeChecker's executable. Can be an executable in the `PATH` environment variable, or an absolute path to one.",
           "default": "CodeChecker",
           "order": 1
         },
