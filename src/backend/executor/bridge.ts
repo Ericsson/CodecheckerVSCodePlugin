@@ -264,7 +264,7 @@ export class ExecutorBridge implements Disposable {
             return;
         }
 
-        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') ?? 'CodeChecker';
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
         const commandArgs = this.getAnalyzeCmdArgs(file);
 
         if (commandArgs === undefined) {
@@ -284,7 +284,7 @@ export class ExecutorBridge implements Disposable {
         // Kill the process, since the entire project is getting analyzed anyways
         this.stopAnalysis();
 
-        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') ?? 'CodeChecker';
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
         const commandArgs = this.getAnalyzeCmdArgs();
 
         if (commandArgs === undefined) {
@@ -309,7 +309,7 @@ export class ExecutorBridge implements Disposable {
             return;
         }
 
-        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') ?? 'CodeChecker';
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
         const commandArgs = this.getParseCmdArgs(...files);
 
         if (commandArgs === undefined) {
@@ -339,7 +339,7 @@ export class ExecutorBridge implements Disposable {
                 return;
             }
 
-            const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') ?? 'CodeChecker';
+            const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
             const commandArgs = this.getVersionCmdArgs();
 
             if (commandArgs === undefined) {

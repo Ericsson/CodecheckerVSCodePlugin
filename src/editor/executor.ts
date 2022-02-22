@@ -33,7 +33,7 @@ export class ExecutorAlerts {
     }
 
     printCmdLine() {
-        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') ?? 'CodeChecker';
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
         const commandLine = quote([
             ccPath,
             ...ExtensionApi.executorBridge.getAnalyzeCmdArgs() ?? []

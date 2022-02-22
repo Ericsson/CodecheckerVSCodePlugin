@@ -55,7 +55,7 @@ export class FolderInitializer {
         case 'Run CodeChecker log':
             await workspace.fs.createDirectory(codeCheckerFolder);
 
-            const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') ?? 'CodeChecker';
+            const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
             const commandLine = quote([
                 ccPath,
                 ...ExtensionApi.executorBridge.getLogCmdArgs()!
