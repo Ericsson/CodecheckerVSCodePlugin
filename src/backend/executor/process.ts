@@ -1,4 +1,5 @@
 import * as child_process from 'child_process';
+import * as os from 'os';
 import { quote } from 'shell-quote';
 import { Disposable, Event, EventEmitter, ExtensionContext, workspace } from 'vscode';
 
@@ -17,6 +18,13 @@ export enum ProcessType {
     parse = 'CodeChecker parse',
     version = 'CodeChecker version',
     other = 'Other process',
+}
+
+const homeDir = os.homedir();
+
+// Expand an initial '~' component in the given path if there is any, otherwise returns the file path without changes.
+function expandUser(filePath: string) {
+    return homeDir ? filePath.replace(/^~(?=$|\/|\\)/, homeDir) : filePath;
 }
 
 export interface ProcessParameters {
@@ -84,7 +92,7 @@ export class ScheduledProcess implements Disposable {
     }
 
     constructor(executable: string, commandArgs?: string[], parameters?: ProcessParameters) {
-        this.executable = executable;
+        this.executable = expandUser(executable);
         this.commandArgs = commandArgs ?? [];
         this.processParameters = parameters ?? {};
 
