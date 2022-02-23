@@ -15,7 +15,7 @@ export enum ProcessStatus {
 export enum ProcessType {
     analyze = 'CodeChecker analyze',
     parse = 'CodeChecker parse',
-    version = 'CodeChecker version',
+    version = 'CodeChecker analyzer-version',
     other = 'Other process',
 }
 
