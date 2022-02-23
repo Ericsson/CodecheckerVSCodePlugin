@@ -1,3 +1,4 @@
+import { quote } from 'shell-quote';
 import {
     ExtensionContext,
     StatusBarAlignment,
@@ -8,6 +9,7 @@ import {
 import { Editor } from '.';
 import { ExtensionApi } from '../backend';
 import { ProcessStatus } from '../backend/executor/process';
+import { getConfigAndReplaceVariables } from '../utils/config';
 
 export class ExecutorAlerts {
     private statusBarItem: StatusBarItem;
@@ -31,7 +33,12 @@ export class ExecutorAlerts {
     }
 
     printCmdLine() {
-        const commandLine = ExtensionApi.executorBridge.getAnalyzeCmdLine();
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
+        const commandLine = quote([
+            ccPath,
+            ...ExtensionApi.executorBridge.getAnalyzeCmdArgs() ?? []
+        ]);
+
         Editor.loggerPanel.window.appendLine('>>> Full command line:');
         Editor.loggerPanel.window.appendLine(`>>> ${commandLine}`);
 

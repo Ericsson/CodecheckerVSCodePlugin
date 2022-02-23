@@ -1,4 +1,5 @@
 import { ExtensionContext, Uri, commands, window, workspace } from 'vscode';
+import { quote } from 'shell-quote';
 import { ExtensionApi } from '../backend';
 
 export class FolderInitializer {
@@ -54,13 +55,19 @@ export class FolderInitializer {
         case 'Run CodeChecker log':
             await workspace.fs.createDirectory(codeCheckerFolder);
 
+            const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
+            const commandLine = quote([
+                ccPath,
+                ...ExtensionApi.executorBridge.getLogCmdArgs()!
+            ]);
+
             const terminal = window.createTerminal('CodeChecker');
             terminal.show(false);
 
             // Wait some time until the terminal is initialized properly. For now there is no elegant solution to solve
             // this problem than using setTimeout.
             setTimeout(() => {
-                terminal.sendText(ExtensionApi.executorBridge.getLogCmdLine()!, false);
+                terminal.sendText(commandLine, false);
             }, 1000);
 
             return;
@@ -82,7 +89,7 @@ export class FolderInitializer {
 
         // If initialization failed, show notification again
         if (
-            ExtensionApi.executorBridge.getAnalyzeCmdLine() === undefined &&
+            ExtensionApi.executorBridge.getAnalyzeCmdArgs() === undefined &&
             workspace.getConfiguration('codechecker.editor').get('showDatabaseDialog') !== false
         ) {
             await this.showDialog();

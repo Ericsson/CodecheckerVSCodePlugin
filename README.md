@@ -83,7 +83,7 @@ Since CodeChecker-related paths vary greatly between systems, the following sett
 | CodeChecker > Backend > Compilation database path <br> (default: *(empty)*) | Path to a custom compilation database, in case of a custom build system. The database setup dialog sets the path for the current workspace only. |
 | CodeChecker > Editor > Show database dialog <br> (default: `on`) | Controls the dialog when opening a workspace without a compilation database. |
 | CodeChecker > Editor > Enable CodeLens <br> (default: `on`) | Enable CodeLens for displaying the reproduction path in the editor. |
-| CodeChecker > Executor > Executable path <br> (default: `CodeChecker`) |  Path to the CodeChecker executable (can be an executable in the `PATH` environment variable). |
+| CodeChecker > Executor > Executable path <br> (default: `CodeChecker`) | Path to the CodeChecker executable. Can be an executable in the `PATH` environment variable, or an absolute path to one. |
 | CodeChecker > Executor > Thread count <br> (default: *(empty)*) | CodeChecker's thread count - leave empty to use all threads. |
 | CodeChecker > Executor > Arguments <br> (default: *(empty)*) | Additional arguments to CodeChecker. For example, if you want to use a config file for CodeChecker pass '--config <config.json>'. For supported arguments, run `CodeChecker analyze --help`. <br> *Note:* The resulting command-line can be previewed with the command `CodeChecker: Show full command line`. |
 | CodeChecker > Executor > Run on save <br> (default: `on`) | Controls auto-run of CodeChecker on saving a file. |
