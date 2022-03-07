@@ -282,6 +282,24 @@ export class ExecutorManager implements Disposable {
         const name = process.processParameters.processType!;
         let namedQueue = this.queue.get(name) ?? [];
 
+        // When adding the same process as the currently running one, assume that its underlying data was changed,
+        // and kill the currently active process
+        if (this.activeProcess?.commandLine === process.commandLine) {
+            this.killProcess();
+        }
+
+        // The exact same task with the exact same commandline won't be added twice
+        if (namedQueue.some((queueItem) => queueItem.commandLine === process.commandLine)) {
+            // In Prepend mode, this means removing and re-adding to move the task to the front of the queue
+            if (method === 'prepend') {
+                namedQueue = namedQueue.filter((queueItem) => queueItem.commandLine !== process.commandLine);
+            } else {
+                // Otherwise, keep the process in the queue as is, to preserve its position
+                this.startNextProcess();
+                return;
+            }
+        }
+
         switch (method) {
         case 'replace':
             namedQueue = [process];
