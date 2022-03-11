@@ -1,0 +1,4 @@
+.codechecker/
+.codechecker-alt/
+.vscode/
+compile_commands.json
