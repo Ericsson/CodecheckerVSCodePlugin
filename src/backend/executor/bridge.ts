@@ -332,6 +332,14 @@ export class ExecutorBridge implements Disposable {
         ExtensionApi.executorManager.addToQueue(process, 'replace');
     }
 
+    public async stopMetadataTasks() {
+        ExtensionApi.executorManager.clearQueue(ProcessType.parse);
+
+        if (ExtensionApi.executorManager.activeProcess?.processParameters.processType === ProcessType.parse) {
+            ExtensionApi.executorManager.killProcess();
+        }
+    }
+
     public async checkVersion(): Promise<boolean> {
         return new Promise((res, _rej) => {
             if (this.versionChecked) {
@@ -346,6 +354,7 @@ export class ExecutorBridge implements Disposable {
                 this._bridgeMessages.fire('>>> Unable to determine CodeChecker version commandline\n');
 
                 this.versionChecked = false;
+                res(this.versionChecked);
                 return;
             }
 
@@ -502,8 +511,6 @@ export class ExecutorBridge implements Disposable {
         if (!workspace.workspaceFolders?.length) {
             return;
         }
-
-        this.versionChecked = false;
 
         const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
 

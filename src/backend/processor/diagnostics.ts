@@ -78,6 +78,7 @@ export class DiagnosticsApi {
 
         // Unload reports without calling parse
         if (filesToLoad.length === 0) {
+            ExtensionApi.executorBridge.stopMetadataTasks();
             this._diagnosticEntries = new Map();
             this._diagnosticsUpdated.fire();
 
