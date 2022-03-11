@@ -88,7 +88,7 @@ suite('Functional Test: Backend - Executor', () => {
         // because they are not replaced inside VSCode's callback
         const analyzeSpy = sinon.spy(executorBridge, 'analyzeFile');
         const fileWatcher = workspace.createFileSystemWatcher(
-            path.join(STATIC_WORKSPACE_PATH, '.codechecker', 'reports', 'metadata.json')
+            path.join(STATIC_WORKSPACE_PATH, '.codechecker-alt', 'reports', 'metadata.json')
         );
 
         let isFileChanged = false;
@@ -105,6 +105,9 @@ suite('Functional Test: Backend - Executor', () => {
 
         await assert.doesNotReject(() => statusWatch, 'CodeChecker analyze errored');
 
+        // Wait for file watcher events to register
+        await new Promise((res) => setTimeout(res, 100));
+
         assert.ok(analyzeSpy.called, 'analyze file starter not called');
 
         assert.ok(isFileChanged, 'CodeChecker analysis did not set metadata on selected file');
@@ -112,7 +115,7 @@ suite('Functional Test: Backend - Executor', () => {
 
     test('CodeChecker analysis on project via command', async function() {
         const fileWatcher = workspace.createFileSystemWatcher(
-            path.join(STATIC_WORKSPACE_PATH, '.codechecker', 'reports', 'metadata.json')
+            path.join(STATIC_WORKSPACE_PATH, '.codechecker-alt', 'reports', 'metadata.json')
         );
 
         let isFileChanged = false;
@@ -126,13 +129,16 @@ suite('Functional Test: Backend - Executor', () => {
 
         await assert.doesNotReject(() => statusWatch, 'CodeChecker analyze errored');
 
+        // Wait for file watcher events to register
+        await new Promise((res) => setTimeout(res, 100));
+
         assert.ok(isFileChanged, 'CodeChecker analysis did not set metadata on project');
     }).timeout(5000);
 
     test('CodeChecker parse on analyzed files', async function() {
         const parseSpy = sinon.spy(executorBridge, 'parseMetadata');
         const fileWatcher = workspace.createFileSystemWatcher(
-            path.join(STATIC_WORKSPACE_PATH, '.codechecker', 'reports', 'metadata.json')
+            path.join(STATIC_WORKSPACE_PATH, '.codechecker-alt', 'reports', 'metadata.json')
         );
 
         let isFileChanged = false;
