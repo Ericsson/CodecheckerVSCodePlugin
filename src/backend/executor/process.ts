@@ -283,8 +283,11 @@ export class ExecutorManager implements Disposable {
         let namedQueue = this.queue.get(name) ?? [];
 
         // When adding the same process as the currently running one, assume that its underlying data was changed,
-        // and kill the currently active process
-        if (this.activeProcess?.commandLine === process.commandLine) {
+        // and kill the currently active process. Does not apply to the version check, as it reads no persistent data.
+        if (
+            this.activeProcess?.commandLine === process.commandLine &&
+            this.activeProcess?.processParameters.processType !== ProcessType.version
+        ) {
             this.killProcess();
         }
 
