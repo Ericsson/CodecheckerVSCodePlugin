@@ -11,6 +11,12 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install dependencies
         run: yarn install --frozen-lockfile
+      - name: Install CodeChecker
+        run: |
+          sudo apt install -y clang-tidy
+          sudo snap install codechecker --classic
+          sudo snap alias codechecker CodeChecker
+          CodeChecker version
       - name: Run tests
         uses: GabrielBB/xvfb-action@v1.0
         with:
