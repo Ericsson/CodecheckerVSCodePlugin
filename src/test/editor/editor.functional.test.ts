@@ -75,17 +75,12 @@ suite('Functional Test: Frontend - Editor', () => {
     });
 
     test('Navigation commands, in same file as well as between different files', async function() {
-        // The path of this division by zero has 6 steps, with steps 2-4 in main.h, rest in main.cpp
-        // Positions are tested by line number/file only, since selection ranges can differ between methods
+        // The path of this division by zero has 6 steps, with steps 3-4 in main.h, rest in main.cpp
         const changePositionViaCommand = async (command: string, ...params: any[]) => {
             await wrapWithEvent(
                 window.onDidChangeTextEditorSelection,
                 async () => await commands.executeCommand(command, ...params)
             );
-        };
-
-        const assertLine = (line: number) => {
-            assert.strictEqual(window.activeTextEditor?.selection.active.line, line, 'Line position mismatch');
         };
 
         await openFileWithEvent(diagnosticsApi.diagnosticsUpdated, filePath);
@@ -103,22 +98,53 @@ suite('Functional Test: Frontend - Editor', () => {
             'Unexpected CodeChecker results, the test needs updating'
         );
 
-        // In baz, on line 8
+        const positions: [string, number, number][] = [
+            [filePath, 3, 17], // Passing 0
+            [filePath, 3, 13], // Entering call
+            [headerPath, 3, 0], // Entered call
+            [headerPath, 4, 2], // Returning zero
+            [filePath, 3, 13], // Returning from foo - same position as Entering call (issue #86)
+            [filePath, 3, 11] // Entered call
+        ];
+
+        const assertPosition = (idx: number) => {
+            const [file, line, col] = positions[idx];
+
+            assert.strictEqual(
+                window.activeTextEditor?.document.uri.fsPath,
+                file,
+                'File mismatch on step ' + idx
+            );
+            assert.strictEqual(
+                window.activeTextEditor?.selection.active.line,
+                line,
+                'Line mismatch on step ' + idx
+            );
+            assert.strictEqual(
+                window.activeTextEditor?.selection.active.character,
+                col,
+                'Column mismatch on step ' + idx
+            );
+        };
+
+        // Report position is the same as step 5 in this case
         await changePositionViaCommand('codechecker.editor.jumpToReport', filePath, 0);
-        assertLine(7);
+        assertPosition(5);
 
-        // In main, on line 4
         await changePositionViaCommand('codechecker.editor.jumpToStep', filePath, 0, 0);
-        assertLine(3);
+        assertPosition(0);
 
-        // In file main.h
-        await changePositionViaCommand('codechecker.editor.nextStep');
-        assert.strictEqual(window.activeTextEditor?.document.uri.fsPath, headerPath, 'Next step opens invalid file');
+        // Step forwards all the way
+        for (let idx = 1; idx < positions.length; idx++) {
+            await changePositionViaCommand('codechecker.editor.nextStep');
+            assertPosition(idx);
+        }
 
-        // File main.cpp in main, on line 4
-        await changePositionViaCommand('codechecker.editor.previousStep');
-        assert.strictEqual(window.activeTextEditor?.document.uri.fsPath, filePath, 'Prev step opens invalid file');
-        assertLine(3);
+        // And then backwards all the way
+        for (let idx = positions.length - 2; idx >= 0; idx--) {
+            await changePositionViaCommand('codechecker.editor.previousStep');
+            assertPosition(idx);
+        }
 
         // closeAllTabs handles all resulting events
         await commands.executeCommand('codechecker.editor.toggleSteps', filePath, 0, false);

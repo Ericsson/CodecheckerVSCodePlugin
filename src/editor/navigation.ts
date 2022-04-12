@@ -3,6 +3,9 @@ import { ExtensionApi } from '../backend/api';
 import { DiagnosticReport } from '../backend/types';
 
 export class NavigationHandler {
+    // The step index keyboard navigation is currently on.
+    private currentStepIndex?: number;
+
     constructor(ctx: ExtensionContext) {
         ctx.subscriptions.push(commands.registerCommand('codechecker.editor.toggleSteps', this.toggleSteps, this));
         ctx.subscriptions.push(commands.registerCommand('codechecker.editor.jumpToReport', this.jumpToReport, this));
@@ -11,12 +14,23 @@ export class NavigationHandler {
         ctx.subscriptions.push(commands.registerCommand('codechecker.editor.previousStep', this.previousStep, this));
     }
 
+    onDiagnosticsUpdated() {
+        // The selectedEntry can change only via toggleSteps() or via a new CodeChecker parse run.
+        // toggleSteps() resets the index on change, CC parse sets the entry to undefined.
+        if (ExtensionApi.diagnostics.selectedEntry === undefined) {
+            this.currentStepIndex = undefined;
+        }
+    }
+
     toggleSteps(file: Uri | string, diagnosticIdx: number, targetState?: boolean) {
         if (typeof file === 'string') {
             file = Uri.file(file);
         }
 
         const diagnostic = ExtensionApi.diagnostics.getFileDiagnostics(file)[diagnosticIdx] ?? [];
+
+        // Reset the step count whether the diagnostics are replaced or not
+        this.currentStepIndex = undefined;
 
         // If the target state isn't given, replace the active report, or clear if it's the same
         targetState = targetState ?? (diagnostic !== ExtensionApi.diagnostics.selectedEntry?.diagnostic);
@@ -48,6 +62,9 @@ export class NavigationHandler {
 
         if (diagnostic === undefined) {
             window.showInformationMessage('Unable to find specified bug, opened its file instead');
+        } else if (diagnostic === ExtensionApi.diagnostics.selectedEntry?.diagnostic) {
+            // With the repr. path open, the report is always the last step
+            this.currentStepIndex = diagnostic.bug_path_events.length - 1;
         }
     }
 
@@ -80,12 +97,17 @@ export class NavigationHandler {
             window.showInformationMessage('Unable to find specified report, opened its file instead');
         } else if (step === undefined) {
             window.showInformationMessage('Unable to find specified reproduction step, opened the report instead');
+            // With the repr. path open, the report is always the last step
+            this.currentStepIndex = diagnostic.bug_path_events.length - 1;
+        } else {
+            // Otherwise set the current index
+            this.currentStepIndex = stepIndex;
         }
     }
 
-    getStepIndexUnderCursor(which: 'first' | 'last'): number | null {
+    getStepIndexUnderCursor(which: 'first' | 'last'): number | undefined {
         if (window.activeTextEditor === undefined || ExtensionApi.diagnostics.selectedEntry === undefined) {
-            return null;
+            return undefined;
         }
 
         const cursor = window.activeTextEditor.selection.anchor;
@@ -95,7 +117,7 @@ export class NavigationHandler {
 
         // The cursor is on the bug's original jump location
         let isExactPosition = false;
-        let foundIdx = null;
+        let foundIdx: number | undefined;
 
         for (const [idx, path] of reprPath.entries()) {
             // Check location first
@@ -118,7 +140,7 @@ export class NavigationHandler {
 
             // Set the first result if there's a range, there's nothing found yet,
             // or set the last result if there's no exact-position match yet
-            if (!path.range || (which === 'first' && foundIdx !== null) || isExactPosition) {
+            if (!path.range || (which === 'first' && foundIdx !== undefined) || isExactPosition) {
                 continue;
             }
 
@@ -138,17 +160,18 @@ export class NavigationHandler {
     }
 
     nextStep() {
-        const stepIdx = this.getStepIndexUnderCursor('last');
+        const stepIdx = this.currentStepIndex ?? this.getStepIndexUnderCursor('last');
         const entry = ExtensionApi.diagnostics.selectedEntry?.diagnostic;
 
-        if (stepIdx === null || !entry) {
+        if (stepIdx === undefined || !entry) {
             return;
         }
 
         const reprPath = entry.bug_path_events;
 
         if (stepIdx < reprPath.length - 1) {
-            const step = reprPath[stepIdx + 1];
+            this.currentStepIndex = stepIdx + 1;
+            const step = reprPath[this.currentStepIndex];
 
             window.showTextDocument(Uri.file(step.file.original_path), {
                 selection: new Range(
@@ -162,17 +185,18 @@ export class NavigationHandler {
     }
 
     previousStep() {
-        const stepIdx = this.getStepIndexUnderCursor('first');
+        const stepIdx = this.currentStepIndex ?? this.getStepIndexUnderCursor('first');
         const entry = ExtensionApi.diagnostics.selectedEntry?.diagnostic;
 
-        if (stepIdx === null || !entry) {
+        if (stepIdx === undefined || !entry) {
             return;
         }
 
         const reprPath = entry.bug_path_events;
 
         if (stepIdx > 0) {
-            const step = reprPath[stepIdx - 1];
+            this.currentStepIndex = stepIdx - 1;
+            const step = reprPath[this.currentStepIndex];
 
             window.showTextDocument(Uri.file(step.file.original_path), {
                 selection: new Range(
