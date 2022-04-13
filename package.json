@@ -251,6 +251,60 @@
           "light": "#e07a16",
           "highContrast": "#eeb"
         }
+      },
+      {
+        "id": "severity.critical",
+        "description": "Indicating compilation errors",
+        "defaults": {
+          "dark": "#e92625",
+          "light": "#e92625",
+          "highContrast": "#e92625"
+        }
+      },
+      {
+        "id": "severity.high",
+        "description": "A true positive indicates that the source code will cause a run-time error",
+        "defaults": {
+          "dark": "#ffa800",
+          "light": "#ffa800",
+          "highContrast": "#ffa800"
+        }
+      },
+      {
+        "id": "severity.medium",
+        "description": "A true positive indicates that the source code that may not cause a run-time error (yet), but against intuition and hence prone to error",
+        "defaults": {
+          "dark": "#a9d323",
+          "light": "#a9d323",
+          "highContrast": "#a9d323"
+        }
+      },
+      {
+        "id": "severity.low",
+        "description": "A true positive indicates that the source code is hard to read/understand or could be easily optimized",
+        "defaults": {
+          "dark": "#669603",
+          "light": "#669603",
+          "highContrast": "#669603"
+        }
+      },
+      {
+        "id": "severity.style",
+        "description": "A true positive indicates that the source code is against a specific coding guideline or could improve readability",
+        "defaults": {
+          "dark": "#9932cc",
+          "light": "#9932cc",
+          "highContrast": "#9932cc"
+        }
+      },
+      {
+        "id": "severity.unspecified",
+        "description": "Severity is not specified for a checker",
+        "defaults": {
+          "dark": "#666666",
+          "light": "#666666",
+          "highContrast": "#666666"
+        }
       }
     ]
   },
