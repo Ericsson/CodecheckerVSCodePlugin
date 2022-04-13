@@ -57,7 +57,16 @@ export class DiagnosticsApi {
 
     constructor(ctx: ExtensionContext) {
         ctx.subscriptions.push(this._diagnosticsUpdated = new EventEmitter());
-        window.onDidChangeVisibleTextEditors(this.onDocumentsChanged, this, ctx.subscriptions);
+        window.onDidChangeVisibleTextEditors((e: TextEditor[]) => {
+            setTimeout(() => {
+                if (!e.length || !window.visibleTextEditors.length) {
+                    return;
+                }
+
+                this.onDocumentsChanged(window.visibleTextEditors);
+            }, 0);
+        }, this, ctx.subscriptions);
+
         ExtensionApi.metadata.metadataUpdated(this.onMetadataUpdated, this, ctx.subscriptions);
 
         this.init();
