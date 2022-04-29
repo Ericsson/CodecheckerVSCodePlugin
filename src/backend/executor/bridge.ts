@@ -12,9 +12,8 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 import { ExtensionApi } from '../api';
-import { getConfigAndReplaceVariables, replaceVariables } from '../../utils/config';
+import { getConfigAndReplaceVariables, parseShellArgsAndReplaceVariables } from '../../utils/config';
 import { ProcessStatus, ProcessType, ScheduledProcess } from '.';
-import { parse } from 'shell-quote';
 
 // Structure:
 //   CodeChecker analyzer version: \n {"base_package_version": "M.m.p", ...}
@@ -127,28 +126,11 @@ export class ExecutorBridge implements Disposable {
             return undefined;
         }
 
-        const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
-
-        // TODO: Refactor for less code repetition across functions
         const reportsFolder = this.getReportsFolder();
 
         const ccArgumentsSetting = workspace.getConfiguration('codechecker.executor').get<string>('arguments');
 
-        // TODO: Merge this collection with replaceVariables
-        const env: { [key: string]: string } = {
-            workspaceFolder,
-            workspaceRoot: workspaceFolder,
-            cwd: process.cwd()
-        };
-        for (const [key, val] of Object.entries(process.env)) {
-            if (val !== undefined) {
-                env[`env:${key}`] = val;
-            }
-        }
-
-        const ccArguments = parse(ccArgumentsSetting ?? '', env)
-            .filter((entry) => typeof entry === 'string' && entry.length > 0)
-            .map((entry) => replaceVariables(entry as string)!);
+        const ccArguments = parseShellArgsAndReplaceVariables(ccArgumentsSetting ?? '');
 
         const ccThreads = workspace.getConfiguration('codechecker.executor').get<string>('threadCount');
         const ccCompileCmd = this.getCompileCommandsPath();
