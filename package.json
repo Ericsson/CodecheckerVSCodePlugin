@@ -192,6 +192,19 @@
             "description": "When using type `selectedFiles`, analyze the selected files."
           }
         }
+      },
+      {
+        "type": "CodeChecker log",
+        "required": [],
+        "properties": {
+          "buildCommand": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional custom build command for CodeChecker log"
+          }
+        }
       }
     ],
     "viewsContainers": {
