@@ -83,6 +83,59 @@ suite('Functional Test: Backend - Executor', () => {
         executorBridge.stopMetadataTasks();
     }).timeout(5000);
 
+    test('CodeChecker log with default command', async function() {
+        const logSpy = sinon.spy(executorBridge, 'runLog');
+        const fileWatcher = workspace.createFileSystemWatcher(
+            path.join(STATIC_WORKSPACE_PATH, '.codechecker-alt', 'compile_commands.json')
+        );
+
+        let isFileChanged = false;
+
+        fileWatcher.onDidCreate(() => isFileChanged = true);
+        fileWatcher.onDidChange(() => isFileChanged = true);
+
+        const statusWatch = processStatusChange();
+
+        await commands.executeCommand('codechecker.executor.runCodeCheckerLog');
+
+        await assert.doesNotReject(() => statusWatch, 'CodeChecker log errored');
+
+        // Wait for file watcher events to register
+        await new Promise((res) => setTimeout(res, 100));
+
+        assert.ok(logSpy.called, 'log command starter not called');
+
+        assert.ok(isFileChanged, 'CodeChecker log did not change compile_commands.json');
+    }).timeout(5000);
+
+    test('CodeChecker log with custom command', async function() {
+        const logSpy = sinon.spy(executorBridge, 'runLog');
+        const fileWatcher = workspace.createFileSystemWatcher(
+            path.join(STATIC_WORKSPACE_PATH, '.codechecker-alt', 'compile_commands.json')
+        );
+
+        let isFileChanged = false;
+
+        fileWatcher.onDidCreate(() => isFileChanged = true);
+        fileWatcher.onDidChange(() => isFileChanged = true);
+
+        const statusWatch = processStatusChange();
+
+        await commands.executeCommand(
+            'codechecker.executor.runLogWithBuildCommand',
+            'cd ${workspaceFolder} && make'
+        );
+
+        await assert.doesNotReject(() => statusWatch, 'CodeChecker log errored');
+
+        // Wait for file watcher events to register
+        await new Promise((res) => setTimeout(res, 100));
+
+        assert.ok(logSpy.called, 'log command starter not called');
+
+        assert.ok(isFileChanged, 'CodeChecker log did not change compile_commands.json');
+    }).timeout(5000);
+
     test('CodeChecker analysis on file via command', async function() {
         // TODO: Direct commands cannot be verified via sinon spy,
         // because they are not replaced inside VSCode's callback
@@ -133,28 +186,6 @@ suite('Functional Test: Backend - Executor', () => {
         await new Promise((res) => setTimeout(res, 100));
 
         assert.ok(isFileChanged, 'CodeChecker analysis did not set metadata on project');
-    }).timeout(5000);
-
-    test('CodeChecker parse on analyzed files', async function() {
-        const parseSpy = sinon.spy(executorBridge, 'parseMetadata');
-        const fileWatcher = workspace.createFileSystemWatcher(
-            path.join(STATIC_WORKSPACE_PATH, '.codechecker-alt', 'reports', 'metadata.json')
-        );
-
-        let isFileChanged = false;
-
-        fileWatcher.onDidCreate(() => isFileChanged = true);
-        fileWatcher.onDidChange(() => isFileChanged = true);
-
-        const statusWatch = processStatusChange();
-
-        await openDocument(filePath);
-
-        await assert.doesNotReject(() => statusWatch, 'CodeChecker parse errored');
-        assert.ok(parseSpy.called, 'parse not called when opening file');
-        assert.ok(!isFileChanged, 'CodeChecker metadata changed by parse call');
-
-        await closeAllTabs();
     }).timeout(5000);
 
     test('Re-parse when reports folder is changed', async function() {
