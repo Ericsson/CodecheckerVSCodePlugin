@@ -11,6 +11,7 @@ suite('Functional Test: Backend - Executor', () => {
     let extensionMembers: CodeCheckerExtension;
     let executorManager: ExecutorManager;
     let executorBridge: ExecutorBridge;
+    let logSpy: any;
 
     const filePath = path.join(STATIC_WORKSPACE_PATH, 'file.cpp');
 
@@ -46,6 +47,9 @@ suite('Functional Test: Backend - Executor', () => {
         await workspace.fs.createDirectory(Uri.file(path.join(STATIC_WORKSPACE_PATH, '.codechecker-alt')));
 
         await updateOutputFolder('${workspaceFolder}/.codechecker-alt');
+
+        // Load a single logSpy for both log tests, otherwise Sinon errors
+        logSpy = sinon.spy(executorBridge, 'runLog');
     });
 
     suiteTeardown('Cleanup generated files', async function() {
@@ -77,6 +81,7 @@ suite('Functional Test: Backend - Executor', () => {
             'does not work with clean CodeChecker out of the box'
         );
 
+        versionSpy.restore();
         await closeAllTabs();
 
         // Remove parse process started by window open
@@ -84,7 +89,6 @@ suite('Functional Test: Backend - Executor', () => {
     }).timeout(5000);
 
     test('CodeChecker log with default command', async function() {
-        const logSpy = sinon.spy(executorBridge, 'runLog');
         const fileWatcher = workspace.createFileSystemWatcher(
             path.join(STATIC_WORKSPACE_PATH, '.codechecker-alt', 'compile_commands.json')
         );
@@ -109,7 +113,6 @@ suite('Functional Test: Backend - Executor', () => {
     }).timeout(5000);
 
     test('CodeChecker log with custom command', async function() {
-        const logSpy = sinon.spy(executorBridge, 'runLog');
         const fileWatcher = workspace.createFileSystemWatcher(
             path.join(STATIC_WORKSPACE_PATH, '.codechecker-alt', 'compile_commands.json')
         );
@@ -164,6 +167,8 @@ suite('Functional Test: Backend - Executor', () => {
         assert.ok(analyzeSpy.called, 'analyze file starter not called');
 
         assert.ok(isFileChanged, 'CodeChecker analysis did not set metadata on selected file');
+
+        analyzeSpy.restore();
     }).timeout(5000);
 
     test('CodeChecker analysis on project via command', async function() {
@@ -221,6 +226,8 @@ suite('Functional Test: Backend - Executor', () => {
     });
 
     test('Duplicate tasks are removed from the queue', async function() {
+        logSpy.restore();
+
         await Promise.all([
             executorBridge.analyzeFile(Uri.file(path.join(STATIC_WORKSPACE_PATH, 'file.cpp'))),
             executorBridge.analyzeFile(Uri.file(path.join(STATIC_WORKSPACE_PATH, 'file.cpp'))),
