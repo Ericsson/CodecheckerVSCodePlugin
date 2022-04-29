@@ -12,7 +12,7 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 import { ExtensionApi } from '../api';
-import { getConfigAndReplaceVariables, parseShellArgsAndReplaceVariables } from '../../utils/config';
+import { getConfigAndReplaceVariables, parseShellArgsAndReplaceVariables, replaceVariables } from '../../utils/config';
 import { ProcessStatus, ProcessType, ScheduledProcess } from '.';
 
 // Structure:
@@ -72,6 +72,12 @@ export class ExecutorBridge implements Disposable {
         );
         ctx.subscriptions.push(
             commands.registerCommand('codechecker.executor.analyzeProject', this.analyzeProject, this)
+        );
+        ctx.subscriptions.push(
+            commands.registerCommand('codechecker.executor.runCodeCheckerLog', this.runLogDefaultCommand, this)
+        );
+        ctx.subscriptions.push(
+            commands.registerCommand('codechecker.executor.runLogWithBuildCommand', this.runLogCustomCommand, this)
         );
         ctx.subscriptions.push(commands.registerCommand('codechecker.executor.stopAnalysis', this.stopAnalysis, this));
 
@@ -158,22 +164,32 @@ export class ExecutorBridge implements Disposable {
         return args;
     }
 
-    public getLogCmdArgs(): string[] | undefined {
+    public getLogCmdArgs(buildCommand?: string): string[] | undefined {
         if (!workspace.workspaceFolders?.length) {
             return undefined;
+        }
+
+        if (buildCommand === undefined) {
+            buildCommand = getConfigAndReplaceVariables('codechecker.backend', 'logBuildCommand') ?? 'make';
+        } else {
+            buildCommand = replaceVariables(buildCommand) ?? 'make';
         }
 
         const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
         const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
             ?? path.join(workspaceFolder, '.codechecker');
 
-        // Use a predefined path here
-        const ccCompileCmd = path.join(ccFolder, 'compile_commands.json');
+        const logArgumentsSetting = workspace.getConfiguration('codechecker.executor').get<string>('logArguments');
+        const logArguments = parseShellArgsAndReplaceVariables(logArgumentsSetting ?? '');
+
+        // Use a predefined path as fallback here
+        const ccCompileCmd = this.getCompileCommandsPath() ?? path.join(ccFolder, 'compile_commands.json');
 
         return [
             'log',
+            ...logArguments,
             '--output', ccCompileCmd,
-            '--build', 'make'
+            '--build', buildCommand
         ];
     }
 
@@ -278,10 +294,54 @@ export class ExecutorBridge implements Disposable {
         ExtensionApi.executorManager.addToQueue(process, 'replace');
     }
 
+    public async runLogCustomCommand(buildCommand?: string) {
+        if (buildCommand === undefined) {
+            buildCommand = await window.showInputBox({
+                prompt: 'Enter the build command to run with CodeChecker log',
+                value: getConfigAndReplaceVariables('codechecker.backend', 'logBuildCommand') ?? 'make'
+            });
+        }
+
+        if (buildCommand !== undefined) {
+            await this.runLog(buildCommand);
+        }
+    }
+
+    public async runLogDefaultCommand() {
+        if (!workspace.workspaceFolders?.length) {
+            return;
+        }
+
+        await this.runLog();
+    }
+
+    public async runLog(buildCommand?: string) {
+        if (!await this.checkVersion()) {
+            return;
+        }
+
+        // Kill the process, since the compilation database is getting overwritten
+        this.stopAnalysis();
+
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
+        const commandArgs = this.getLogCmdArgs(buildCommand);
+
+        if (commandArgs === undefined) {
+            return;
+        }
+
+        const process = new ScheduledProcess(ccPath, commandArgs, { processType: ProcessType.log });
+
+        ExtensionApi.executorManager.addToQueue(process, 'replace');
+    }
+
     public stopAnalysis() {
         ExtensionApi.executorManager.clearQueue(ProcessType.analyze);
+        ExtensionApi.executorManager.clearQueue(ProcessType.log);
 
-        if (ExtensionApi.executorManager.activeProcess?.processParameters.processType === ProcessType.analyze) {
+        const processType = ExtensionApi.executorManager.activeProcess?.processParameters.processType;
+
+        if (processType === ProcessType.analyze || processType === ProcessType.log) {
             ExtensionApi.executorManager.killProcess();
         }
     }

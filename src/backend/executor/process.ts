@@ -15,6 +15,7 @@ export enum ProcessStatus {
 
 export enum ProcessType {
     analyze = 'CodeChecker analyze',
+    log = 'CodeChecker log',
     parse = 'CodeChecker parse',
     version = 'CodeChecker analyzer-version',
     other = 'Other process',
@@ -131,7 +132,11 @@ export class ScheduledProcess implements Disposable {
 
         this._processStderr.fire(`>>> Starting process '${commonName}'\n`);
         this._processStderr.fire(`> ${this.commandLine}\n`);
-        this.activeProcess = child_process.spawn(this.executable, this.commandArgs);
+        this.activeProcess = child_process.spawn(
+            this.executable,
+            this.commandArgs,
+            { cwd: workspace.workspaceFolders[0].uri.fsPath }
+        );
 
         this.activeProcess.stdout!.on('data', (stdout: Buffer) => {
             const decoded = stdout.toString();

@@ -68,15 +68,23 @@
       },
       {
         "command": "codechecker.executor.showCommandLine",
-        "title": "CodeChecker: Show full command line"
+        "title": "CodeChecker: Show full CodeChecker analyze command line"
       },
       {
-        "command": "codechecker.logging.showOutput",
+        "command": "codechecker.executor.runCodeCheckerLog",
+        "title": "CodeChecker: Run CodeChecker log"
+      },
+      {
+        "command": "codechecker.executor.runLogWithBuildCommand",
+        "title": "CodeChecker: Run CodeChecker log with a custom build command..."
+      },
+      {
+        "command": "codechecker.executor.showOutput",
         "title": "CodeChecker: Show Output"
       },
       {
-        "command": "codechecker.executor.stopAnalysis",
-        "title": "CodeChecker: Stop analysis"
+        "command": "codechecker.executor.stopCodeChecker",
+        "title": "CodeChecker: Stop running CodeChecker instance"
       }
     ],
     "configuration": {
@@ -115,6 +123,18 @@
           "default": null,
           "minimum": 1,
           "order": 5
+        },
+        "codechecker.executor.logBuildCommand": {
+          "type": "string",
+          "description": "The build command passed to CodeChecker log.",
+          "default": "make",
+          "order": 6
+        },
+        "codechecker.executor.logArguments": {
+          "type": "string",
+          "description": "Additional arguments to CodeChecker log command. For supported arguments, run `CodeChecker log --help`. The command `CodeChecker: Preview CodeChecker log in terminal` command shows the resulting command line.",
+          "default": "",
+          "order": 7
         },
         "codechecker.editor.showDatabaseDialog": {
           "type": "boolean",
@@ -156,7 +176,7 @@
         "properties": {
           "taskType": {
             "type": "string",
-            "description": "The type of the CodeChecker task",
+            "description": "The type of the CodeChecker analysis task",
             "enum": [
               "project",
               "currentFile",
