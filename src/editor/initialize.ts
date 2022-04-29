@@ -1,6 +1,6 @@
-import { ExtensionContext, Uri, commands, window, workspace } from 'vscode';
-import { quote } from 'shell-quote';
+import { ExtensionContext, commands, window, workspace } from 'vscode';
 import { ExtensionApi } from '../backend';
+import { Editor } from './editor';
 
 export class FolderInitializer {
     constructor(_ctx: ExtensionContext) {
@@ -37,40 +37,9 @@ export class FolderInitializer {
             'Don\'t show again'
         );
 
-        const getConfigAndReplaceVariables = (category: string, name: string): string | undefined => {
-            const configValue = workspace.getConfiguration(category).get<string>(name);
-            return configValue
-                ?.replace(/\${workspaceRoot}/g, workspaceFolder.fsPath)
-                .replace(/\${workspaceFolder}/g, workspaceFolder.fsPath)
-                .replace(/\${cwd}/g, process.cwd())
-                .replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => process.env[envName] ?? '');
-        };
-
-        const codeCheckerFolder = Uri.file(
-            getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
-            ?? Uri.joinPath(workspaceFolder, '.codechecker').fsPath
-        );
-
         switch (choice) {
         case 'Run CodeChecker log':
-            await workspace.fs.createDirectory(codeCheckerFolder);
-
-            const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
-            const commandLine = quote([
-                ccPath,
-                ...ExtensionApi.executorBridge.getLogCmdArgs()!
-            ]);
-
-            const terminal = window.createTerminal('CodeChecker');
-            terminal.show(false);
-
-            // Wait some time until the terminal is initialized properly. For now there is no elegant solution to solve
-            // this problem than using setTimeout.
-            setTimeout(() => {
-                terminal.sendText(commandLine, false);
-            }, 1000);
-
-            return;
+            return await Editor.executorAlerts.showLogInTerminal();
         case 'Locate':
             const filePath = await window.showOpenDialog({ canSelectFiles: true });
             if (!filePath || filePath.length === 0) {

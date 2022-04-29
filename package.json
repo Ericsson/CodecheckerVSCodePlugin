@@ -79,6 +79,10 @@
         "title": "CodeChecker: Run CodeChecker log with a custom build command..."
       },
       {
+        "command": "codechecker.executor.previewLogInTerminal",
+        "title": "CodeChecker: Preview CodeChecker log in terminal"
+      },
+      {
         "command": "codechecker.executor.showOutput",
         "title": "CodeChecker: Show Output"
       },
