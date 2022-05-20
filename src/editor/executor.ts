@@ -3,8 +3,11 @@ import {
     ExtensionContext,
     StatusBarAlignment,
     StatusBarItem,
+    Terminal,
+    Uri,
     commands,
-    window
+    window,
+    workspace,
 } from 'vscode';
 import { Editor } from '.';
 import { ExtensionApi } from '../backend';
@@ -14,11 +17,15 @@ import { getConfigAndReplaceVariables } from '../utils/config';
 export class ExecutorAlerts {
     private statusBarItem: StatusBarItem;
     private enableProgress = true;
+    private codeCheckerTerminal?: Terminal;
 
     constructor(ctx: ExtensionContext) {
         ctx.subscriptions.push(this.statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left));
         ctx.subscriptions.push(
             commands.registerCommand('codechecker.executor.showCommandLine', this.printCmdLine, this)
+        );
+        ctx.subscriptions.push(
+            commands.registerCommand('codechecker.executor.previewLogInTerminal', this.showLogInTerminal, this)
         );
 
         ExtensionApi.executorManager.processStatusChange(this.onStatusChange, this, ctx.subscriptions);
@@ -43,6 +50,40 @@ export class ExecutorAlerts {
         Editor.loggerPanel.window.appendLine(`>>> ${commandLine}`);
 
         Editor.loggerPanel.showOutputTab();
+    }
+
+    async showLogInTerminal() {
+        const workspaceFolder = workspace.workspaceFolders?.length && workspace.workspaceFolders[0].uri;
+
+        if (!workspaceFolder) {
+            return;
+        }
+
+        const codeCheckerFolder = Uri.file(
+            getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
+            ?? Uri.joinPath(workspaceFolder, '.codechecker').fsPath
+        );
+
+        // Create the CodeChecker folder, otherwise running log will fail
+        await workspace.fs.createDirectory(codeCheckerFolder);
+
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
+        const commandLine = quote([
+            ccPath,
+            ...ExtensionApi.executorBridge.getLogCmdArgs()!
+        ]);
+
+        if (this.codeCheckerTerminal === undefined) {
+            this.codeCheckerTerminal = window.createTerminal('CodeChecker');
+        }
+
+        this.codeCheckerTerminal!.show(false);
+
+        // Wait some time until the terminal is initialized properly. For now there is no elegant solution to solve
+        // this problem than using setTimeout.
+        setTimeout(() => {
+            this.codeCheckerTerminal!.sendText(commandLine, false);
+        }, 1000);
     }
 
     onStatusChange(status: ProcessStatus) {

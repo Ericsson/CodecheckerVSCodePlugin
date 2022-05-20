@@ -107,6 +107,22 @@ export class OverviewView implements TreeDataProvider<OverviewItem> {
                 }
             ),
             new OverviewItem(
+                'Re-run CodeChecker log',
+                'list-flat',
+                {
+                    title: 'runCodeCheckerLog',
+                    command: 'codechecker.executor.runCodeCheckerLog'
+                }
+            ),
+            new OverviewItem(
+                'Preview CodeChecker log in terminal',
+                'terminal',
+                {
+                    title: 'previewLogInTerminal',
+                    command: 'codechecker.executor.previewLogInTerminal'
+                }
+            ),
+            new OverviewItem(
                 'Stop analysis',
                 'debug-stop',
                 {
@@ -131,6 +147,22 @@ export class OverviewView implements TreeDataProvider<OverviewItem> {
                 {
                     title: 'reloadMetadata',
                     command: 'codechecker.backend.reloadMetadata',
+                }
+            ),
+            new OverviewItem(
+                'Run CodeChecker log',
+                'list-flat',
+                {
+                    title: 'runCodeCheckerLog',
+                    command: 'codechecker.executor.runCodeCheckerLog'
+                }
+            ),
+            new OverviewItem(
+                'Preview CodeChecker log in terminal',
+                'terminal',
+                {
+                    title: 'previewLogInTerminal',
+                    command: 'codechecker.executor.previewLogInTerminal'
                 }
             ),
         ]

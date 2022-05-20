@@ -30,7 +30,7 @@ class ExecutorTaskTerminal implements Pseudoterminal {
     onDidClose?: Event<void> = this._onDidClose.event;
 
     open(_initialDimensions?: TerminalDimensions): void {
-        this._onDidWrite.fire('Piping the console log is work-in-progress');
+        this._onDidWrite.fire('Piping the console log is work-in-progress, see Output/CodeChecker tab for logs');
     }
 
     close(): void {
@@ -38,7 +38,7 @@ class ExecutorTaskTerminal implements Pseudoterminal {
     }
 }
 
-export class ExecutorTaskProvider implements TaskProvider<Task> {
+export class AnalyzeTaskProvider implements TaskProvider<Task> {
     taskID = 'CodeChecker';
 
     constructor(ctx: ExtensionContext) {
@@ -100,6 +100,55 @@ export class ExecutorTaskProvider implements TaskProvider<Task> {
         const executionBody = async (_definition: TaskDefinition) => {
             const terminal = new ExecutorTaskTerminal();
             callback!();
+            return terminal;
+        };
+
+        return new Task(
+            task.definition,
+            task.scope ?? workspace.workspaceFolders![0],
+            task.name,
+            task.source,
+            new CustomExecution(executionBody)
+        );
+    }
+}
+
+export class LogTaskProvider implements TaskProvider<Task> {
+    taskID = 'CodeChecker log';
+
+    constructor(ctx: ExtensionContext) {
+        ctx.subscriptions.push(tasks.registerTaskProvider(this.taskID, this));
+    }
+
+    provideTasks(token: CancellationToken): ProviderResult<Task[]> {
+        if (workspace.workspaceFolders === undefined) {
+            return [];
+        }
+
+        const tasks = [
+            this.resolveTask(new Task(
+                { type: this.taskID },
+                workspace.workspaceFolders[0],
+                'Run CodeChecker log',
+                this.taskID
+            ), token)!,
+        ];
+
+        return tasks;
+    }
+
+    resolveTask(task: Task, _token: CancellationToken): Task | undefined {
+        const callback = () => {
+            if (task.definition.customBuildCommand) {
+                ExtensionApi.executorBridge.runLogCustomCommand(task.definition.customBuildCommand);
+            } else {
+                ExtensionApi.executorBridge.runLogDefaultCommand();
+            }
+        };
+
+        const executionBody = async (_definition: TaskDefinition) => {
+            const terminal = new ExecutorTaskTerminal();
+            callback();
             return terminal;
         };
 

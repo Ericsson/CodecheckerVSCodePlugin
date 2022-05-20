@@ -16,9 +16,15 @@ async function main() {
 
         console.error('Tests workspace folder:', STATIC_WORKSPACE_PATH);
 
+        const codeCheckerFolder = path.join(STATIC_WORKSPACE_PATH, '.codechecker');
+
+        if (!await promisify(fs.exists)(codeCheckerFolder)) {
+            await promisify(fs.mkdir)(codeCheckerFolder, { recursive: true });
+        }
+
         // Run CodeChecker on the test workspace first, to get the compile database, and initial files
         const logResult = spawnSync(
-            'CodeChecker log -b "make" -o ./compile_commands.json',
+            'CodeChecker log -b "make" -o ./.codechecker/compile_commands.json',
             { cwd: STATIC_WORKSPACE_PATH, shell: true, stdio: 'inherit' }
         );
 
@@ -31,7 +37,7 @@ async function main() {
         }
 
         const analyzeResult = spawnSync(
-            'CodeChecker analyze ./compile_commands.json -o ./.codechecker/reports',
+            'CodeChecker analyze ./.codechecker/compile_commands.json -o ./.codechecker/reports',
             { cwd: STATIC_WORKSPACE_PATH, shell: true, stdio: 'inherit' }
         );
 
