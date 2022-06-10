@@ -11,14 +11,23 @@ import {
     workspace
 } from 'vscode';
 import * as path from 'path';
-import { parseMetadata } from '../parser';
-import { CheckerMetadata } from '../types';
+import { ExtensionApi } from '../api';
+import { parseCheckerData, parseMetadata } from '../parser';
+import { CheckerData, CheckerMetadata } from '../types';
 import { shouldShowNotifications } from '../../utils/config';
 
 export class MetadataApi implements Disposable {
     private _metadata?: CheckerMetadata;
     public get metadata(): CheckerMetadata | undefined {
         return this._metadata;
+    }
+    private _checkerData: Map<string, CheckerData> = new Map();
+    /**
+     * Content based on the CodeChecker checkers command.
+     * Key: checker name, value: checker descriptor data (incl. doc URL)
+     */
+    public get checkerData(): Map<string, CheckerData>{
+        return this._checkerData;
     }
 
     // Path to the metadata.json file
@@ -50,6 +59,7 @@ export class MetadataApi implements Disposable {
 
     private init() {
         this.updateMetadataPath();
+        ExtensionApi.executorBridge.reloadCheckerData();
     }
 
     dispose() {
@@ -200,9 +210,35 @@ export class MetadataApi implements Disposable {
         this._metadataUpdated.fire(this._metadata);
     }
 
+    parseCheckerData(checkerData: string) {
+        let parsedData;
+
+        try {
+            parsedData = parseCheckerData(checkerData);
+        } catch (err: any) {
+            console.error(err);
+
+            if (err instanceof SyntaxError) {
+                window.showErrorMessage('Failed to read CodeChecker checker data: Invalid format');
+            } else {
+                window.showErrorMessage('Failed to read CodeChecker checker data\nCheck console for more details');
+            }
+
+            return;
+        }
+
+        const dataMap = new Map();
+
+        for (const entry of parsedData) {
+            dataMap.set(`${entry.analyzer}/${entry.name}`, entry);
+        }
+
+        this._checkerData = dataMap;
+    }
+
     onConfigChanged(event: ConfigurationChangeEvent) {
         if (event.affectsConfiguration('codechecker.backend')) {
-            this.updateMetadataPath();
+            this.init();
         }
     }
 }
