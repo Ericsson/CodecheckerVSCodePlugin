@@ -273,8 +273,9 @@ export class ExecutorManager implements Disposable {
             break;
         default:
             this._processStatusChange.fire(status);
-            this.activeProcess?.dispose();
+            const previousProcess = this.activeProcess;
             this.activeProcess = undefined;
+            previousProcess?.dispose();
             this.startNextProcess();
             break;
         }
@@ -300,9 +301,14 @@ export class ExecutorManager implements Disposable {
         if (namedQueue.some((queueItem) => queueItem.commandLine === process.commandLine)) {
             // In Prepend mode, this means removing and re-adding to move the task to the front of the queue
             if (method === 'prepend') {
+                for (const entry of namedQueue.filter((queueItem) => queueItem.commandLine === process.commandLine)) {
+                    entry.dispose();
+                }
+
                 namedQueue = namedQueue.filter((queueItem) => queueItem.commandLine !== process.commandLine);
             } else {
                 // Otherwise, keep the process in the queue as is, to preserve its position
+                process.dispose();
                 this.startNextProcess();
                 return;
             }
@@ -310,6 +316,10 @@ export class ExecutorManager implements Disposable {
 
         switch (method) {
         case 'replace':
+            for (const entry of namedQueue) {
+                entry.dispose();
+            }
+
             namedQueue = [process];
             break;
         case 'prepend':
