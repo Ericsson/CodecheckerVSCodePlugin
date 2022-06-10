@@ -1,6 +1,6 @@
 import { TextDecoder } from 'util';
 import { Uri, workspace } from 'vscode';
-import { AnalyzerMetadata, CheckerMetadata, MetadataFile } from '../types';
+import { AnalyzerMetadata, CheckerData, CheckerMetadata, MetadataFile } from '../types';
 import { v1Types } from '../types/internal/metadata';
 
 export class MetadataParseError extends Error {
@@ -68,4 +68,14 @@ export async function parseMetadata(path: string): Promise<MetadataFile> {
     }
 
     return metadataFile as MetadataFile;
+}
+
+export function parseCheckerData(data: string): CheckerData[] {
+    const parsedData = JSON.parse(data) as CheckerData[];
+
+    if (parsedData === undefined) {
+        throw new SyntaxError('Invalid output of CodeChecker checkers');
+    }
+
+    return parsedData;
 }

@@ -184,6 +184,26 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
             arguments: [currentFile, entryId, true]
         };
 
+        const checkerData = ExtensionApi.metadata.checkerData
+            ?.get(`${entry.analyzer_name ?? ''}/${entry.checker_name ?? ''}`);
+
+        const docUrl = checkerData?.labels
+            .find((val) => val.startsWith('doc_url:'))
+            ?.substring(8);
+
+        const goToDocsItems = [];
+
+        if (docUrl !== undefined) {
+            const goToDocsItem = new ReportTreeItem('openDocs', 'Go to checker documentation', new ThemeIcon('book'));
+            goToDocsItem.command = {
+                title: 'openDocs',
+                command: 'vscode.open',
+                arguments: [docUrl]
+            };
+
+            goToDocsItems.push(goToDocsItem);
+        }
+
         let toggleStepsItem = null;
         if (isActiveReport) {
             toggleStepsItem = new ReportTreeItem(
@@ -202,6 +222,7 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
         let indentation = 0;
         return [
             jumpToReportItem,
+            ...goToDocsItems,
             toggleStepsItem,
             ...entry.bug_path_events.map((event, idx) => {
                 const filePath = event.file.original_path;
