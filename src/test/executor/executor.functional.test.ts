@@ -208,7 +208,7 @@ suite('Functional Test: Backend - Executor', () => {
         await closeAllTabs();
     }).timeout(8000);
 
-    test('Stop analysis cancels current task and clears the queue', async function() {
+    test('Stop analysis cancels current long-running task and clears the queue', async function() {
         await Promise.all([
             executorBridge.analyzeFile(Uri.file(path.join(STATIC_WORKSPACE_PATH, 'file.cpp'))),
             executorBridge.analyzeFile(Uri.file(path.join(STATIC_WORKSPACE_PATH, 'file2.cpp'))),
@@ -221,8 +221,15 @@ suite('Functional Test: Backend - Executor', () => {
 
         executorBridge.stopAnalysis();
 
-        assert(executorManager['queue'].get(ProcessType.analyze)!.length === 0, 'Queue not cleared on analysis stop');
-        assert(executorManager.activeProcess === undefined, 'Running process not killed');
+        const processType = executorManager.activeProcess?.processParameters.processType;
+
+        for (const clearedProcessType of [ProcessType.analyze, ProcessType.log]) {
+            assert(
+                executorManager['queue'].get(clearedProcessType)!.length === 0,
+                'Queue not cleared on analysis stop'
+            );
+            assert(processType !== clearedProcessType, 'Running process not killed');
+        }
     });
 
     test('Duplicate tasks are removed from the queue', async function() {
