@@ -107,7 +107,7 @@ export class ScheduledProcess implements Disposable {
 
     dispose() {
         if (this.activeProcess) {
-            this.activeProcess.kill();
+            this.killProcess();
         }
 
         this._processStatusChange.fire(ProcessStatus.removed);
@@ -189,6 +189,10 @@ export class ScheduledProcess implements Disposable {
                 this._processStatus = ProcessStatus.running;
                 this._processStatusChange.fire(ProcessStatus.running);
             }
+            break;
+        case ProcessStatus.removed:
+            // dispose() calls killProcess before dispatching this event.
+            this._processStatusChange.fire(ProcessStatus.removed);
             break;
         default:
             if (this._processStatus === ProcessStatus.running) {
