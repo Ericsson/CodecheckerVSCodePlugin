@@ -87,7 +87,8 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
     protected currentEntryList?: DiagnosticReport[];
 
     protected tree?: TreeView<ReportTreeItem>;
-    private treeItems: Map<Uri, ReportTreeItem> = new Map();
+    // Contains [fullpath => item] entries
+    private treeItems: Map<string, ReportTreeItem> = new Map();
     private selectedTreeItems: ReportTreeItem[] = [];
 
     constructor(ctx: ExtensionContext) {
@@ -98,7 +99,7 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
             // FIXME: fired twice when a file is opened freshly.
             const selected = ExtensionApi.diagnostics.selectedEntry?.position.file;
             for (const filePath of this.treeItems.keys()) {
-                if (filePath.fsPath !== selected) {
+                if (filePath !== selected) {
                     this.treeItems.delete(filePath);
                 }
             }
@@ -316,24 +317,23 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
             return t.children;
         }
 
-        if (!this.treeItems.has(currentFile)) {
-            let filePath = currentFile.path;
-            const workspaceFolder = workspace.workspaceFolders?.[0].uri.fsPath;
-            if (workspaceFolder) {
-                filePath = relative(workspaceFolder, filePath);
-            }
+        // Refresh current file's reports
+        let filePath = currentFile.fsPath;
+        const workspaceFolder = workspace.workspaceFolders?.[0].uri.fsPath;
+        if (workspaceFolder) {
+            filePath = relative(workspaceFolder, filePath);
+        }
 
-            const item: ReportTreeItem = new ReportTreeItem(
-                currentFile.path, filePath, new ThemeIcon('file-code'),
-                this.getRootItems());
-            item.setId();
+        const item: ReportTreeItem = new ReportTreeItem(
+            currentFile.fsPath, filePath, new ThemeIcon('file-code'),
+            this.getRootItems());
+        item.setId();
 
-            item.collapsibleState = TreeItemCollapsibleState.Expanded;
-            this.treeItems.set(currentFile, item);
+        item.collapsibleState = TreeItemCollapsibleState.Expanded;
+        this.treeItems.set(currentFile.fsPath, item);
 
-            if (!this.selectedTreeItems.length) {
-                item.children?.[0]?.children?.[0].expand();
-            }
+        if (!this.selectedTreeItems.length) {
+            item.children?.[0]?.children?.[0].expand();
         }
 
         this.revealSelectedItems();
