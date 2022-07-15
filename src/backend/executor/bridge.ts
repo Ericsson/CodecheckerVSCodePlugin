@@ -31,6 +31,12 @@ interface AnalyzerVersion {
 export class ExecutorBridge implements Disposable {
     private versionChecked = false;
     private shownVersionWarning = false;
+    private versionCheckInProgress = false;
+
+    private _versionCheckFinished: EventEmitter<boolean> = new EventEmitter();
+    private get versionCheckFinished(): Event<boolean> {
+        return this._versionCheckFinished.event;
+    }
 
     private databaseWatches: FileSystemWatcher[] = [];
     private databaseEvents: Disposable[] = [];
@@ -50,6 +56,7 @@ export class ExecutorBridge implements Disposable {
     public get databaseLocationChanged(): Event<void> {
         return this._databaseLocationChanged.event;
     }
+
 
     /** Automatically adds itself to ctx.subscriptions. */
     constructor(ctx: ExtensionContext) {
@@ -389,6 +396,16 @@ export class ExecutorBridge implements Disposable {
                 return;
             }
 
+            if (this.versionCheckInProgress) {
+                const disposable = this.versionCheckFinished((result) => {
+                    disposable.dispose();
+                    res(result);
+                });
+                return;
+            }
+
+            this.versionCheckInProgress = true;
+
             const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
             const commandArgs = this.getVersionCmdArgs();
 
@@ -396,6 +413,10 @@ export class ExecutorBridge implements Disposable {
                 this._bridgeMessages.fire('>>> Unable to determine CodeChecker version commandline\n');
 
                 this.versionChecked = false;
+
+                this.versionCheckInProgress = false;
+                this._versionCheckFinished.fire(this.versionChecked);
+
                 res(this.versionChecked);
                 return;
             }
@@ -541,6 +562,9 @@ export class ExecutorBridge implements Disposable {
                         }
                     }
                 }
+
+                this.versionCheckInProgress = false;
+                this._versionCheckFinished.fire(this.versionChecked);
 
                 res(this.versionChecked);
             });
