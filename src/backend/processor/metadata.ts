@@ -13,6 +13,7 @@ import {
 import * as path from 'path';
 import { parseMetadata } from '../parser';
 import { CheckerMetadata } from '../types';
+import { shouldShowNotifications } from '../../utils/config';
 
 export class MetadataApi implements Disposable {
     private _metadata?: CheckerMetadata;
@@ -98,7 +99,10 @@ export class MetadataApi implements Disposable {
         this.reloadMetadata()
             .catch((err) => {
                 console.log(err);
-                window.showErrorMessage('Unexpected error when reloading metadata\nCheck console for more details');
+
+                if (shouldShowNotifications()) {
+                    window.showErrorMessage('Unexpected error when reloading metadata\nCheck console for more details');
+                }
             });
     }
 
@@ -113,16 +117,20 @@ export class MetadataApi implements Disposable {
         let precheckFailed = false;
 
         if (!this.metadataPath) {
-            window.showWarningMessage(
-                'Metadata folder has invalid path\n' +
-                'Please change `CodeChecker > Backend > Output folder path` in the settings'
-            );
+            if (shouldShowNotifications()) {
+                window.showWarningMessage(
+                    'Metadata folder has invalid path\n' +
+                    'Please change `CodeChecker > Backend > Output folder path` in the settings'
+                );
+            }
 
             precheckFailed = true;
         }
 
         if (!workspace.workspaceFolders?.length) {
-            window.showInformationMessage('CodeChecker is disabled - open a workspace to get started');
+            if (shouldShowNotifications()) {
+                window.showInformationMessage('CodeChecker is disabled - open a workspace to get started');
+            }
 
             precheckFailed = true;
         }
@@ -147,7 +155,11 @@ export class MetadataApi implements Disposable {
             // For parse errors, print the message instead
             case 'UnsupportedVersion':
                 console.error(err);
-                window.showErrorMessage(`Failed to read CodeChecker metadata: ${err.message}`);
+
+                if (shouldShowNotifications()) {
+                    window.showErrorMessage(`Failed to read CodeChecker metadata: ${err.message}`);
+                }
+
                 break;
 
             default:
@@ -155,12 +167,18 @@ export class MetadataApi implements Disposable {
 
                 // File format errors
                 if (err instanceof SyntaxError) {
-                    window.showErrorMessage('Failed to read CodeChecker metadata: Invalid format');
+                    if (shouldShowNotifications()) {
+                        window.showErrorMessage('Failed to read CodeChecker metadata: Invalid format');
+                    }
+
                     break;
                 }
 
                 // Misc. errors
-                window.showErrorMessage('Failed to read CodeChecker metadata\nCheck console for more details');
+                if (shouldShowNotifications()) {
+                    window.showErrorMessage('Failed to read CodeChecker metadata\nCheck console for more details');
+                }
+
                 break;
             }
         }

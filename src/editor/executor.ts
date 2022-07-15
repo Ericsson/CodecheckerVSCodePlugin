@@ -12,7 +12,7 @@ import {
 import { Editor } from '.';
 import { ExtensionApi } from '../backend';
 import { ProcessStatus } from '../backend/executor/process';
-import { getConfigAndReplaceVariables } from '../utils/config';
+import { getConfigAndReplaceVariables, shouldShowNotifications } from '../utils/config';
 
 export class ExecutorAlerts {
     private statusBarItem: StatusBarItem;
@@ -110,7 +110,10 @@ export class ExecutorAlerts {
             break;
         case ProcessStatus.errored:
             this.statusBarItem.text = '$(testing-error-icon) CodeChecker: analysis errored';
-            window.showErrorMessage('CodeChecker finished with error - see logs for details');
+
+            if (shouldShowNotifications()) {
+                window.showErrorMessage('CodeChecker finished with error - see logs for details');
+            }
             break;
         default:
             break;

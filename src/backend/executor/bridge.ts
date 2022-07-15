@@ -12,7 +12,12 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 import { ExtensionApi } from '../api';
-import { getConfigAndReplaceVariables, parseShellArgsAndReplaceVariables, replaceVariables } from '../../utils/config';
+import {
+    getConfigAndReplaceVariables,
+    parseShellArgsAndReplaceVariables,
+    replaceVariables,
+    shouldShowNotifications
+} from '../../utils/config';
 import { ProcessStatus, ProcessType, ScheduledProcess } from '.';
 
 // Structure:
@@ -149,7 +154,10 @@ export class ExecutorBridge implements Disposable {
         const ccCompileCmd = this.getCompileCommandsPath();
 
         if (ccCompileCmd === undefined) {
-            window.showWarningMessage('No compilation database found, CodeChecker not started - see logs for details');
+            if (shouldShowNotifications()) {
+                window.showWarningMessage(
+                    'No compilation database found, CodeChecker not started - see logs for details');
+            }
             return undefined;
         }
 
@@ -405,7 +413,6 @@ export class ExecutorBridge implements Disposable {
             }
 
             this.versionCheckInProgress = true;
-
             const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
             const commandArgs = this.getVersionCmdArgs();
 
@@ -448,7 +455,7 @@ export class ExecutorBridge implements Disposable {
 
                             this.versionChecked = false;
 
-                            if (!this.shownVersionWarning) {
+                            if (shouldShowNotifications() && !this.shownVersionWarning) {
                                 this.shownVersionWarning = true;
                                 let choice;
 
@@ -494,7 +501,7 @@ export class ExecutorBridge implements Disposable {
 
                             this.versionChecked = true;
 
-                            if (this.shownVersionWarning) {
+                            if (shouldShowNotifications() && this.shownVersionWarning) {
                                 this.shownVersionWarning = false;
 
                                 window.showInformationMessage(
@@ -506,9 +513,11 @@ export class ExecutorBridge implements Disposable {
                         this._bridgeMessages.fire(`>>> Internal error while checking version: ${err}\n`);
                         this.versionChecked = false;
 
-                        window.showErrorMessage(
-                            'CodeChecker: Internal error while checking version - see logs for details'
-                        );
+                        if (shouldShowNotifications()) {
+                            window.showErrorMessage(
+                                'CodeChecker: Internal error while checking version - see logs for details'
+                            );
+                        }
                     }
 
                     break;
@@ -522,8 +531,9 @@ export class ExecutorBridge implements Disposable {
                     this._bridgeMessages.fire('>>> CodeChecker error while checking version\n');
                     this.versionChecked = false;
 
-                    if (!this.shownVersionWarning) {
+                    if (shouldShowNotifications() && !this.shownVersionWarning) {
                         this.shownVersionWarning = true;
+
                         let choice;
 
                         while (choice !== 'Close') {

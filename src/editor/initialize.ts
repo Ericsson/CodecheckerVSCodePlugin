@@ -1,5 +1,6 @@
 import { ExtensionContext, commands, window, workspace } from 'vscode';
 import { ExtensionApi } from '../backend';
+import { shouldShowNotifications } from '../utils/config';
 import { Editor } from './editor';
 
 export class FolderInitializer {
@@ -20,6 +21,10 @@ export class FolderInitializer {
     }
 
     async showDialog() {
+        if (!shouldShowNotifications()) {
+            return;
+        }
+
         const workspaceFolder = workspace.workspaceFolders?.length && workspace.workspaceFolders[0].uri;
 
         if (!workspaceFolder) {
