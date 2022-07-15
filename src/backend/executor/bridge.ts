@@ -405,6 +405,8 @@ export class ExecutorBridge implements Disposable {
             }
 
             this.versionCheckInProgress = true;
+            const shouldShowWarning = workspace.getConfiguration('codechecker.executor')
+                .get<boolean>('enableVersionCheckNotifications');
 
             const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
             const commandArgs = this.getVersionCmdArgs();
@@ -448,7 +450,7 @@ export class ExecutorBridge implements Disposable {
 
                             this.versionChecked = false;
 
-                            if (!this.shownVersionWarning) {
+                            if (shouldShowWarning && !this.shownVersionWarning) {
                                 this.shownVersionWarning = true;
                                 let choice;
 
@@ -494,7 +496,7 @@ export class ExecutorBridge implements Disposable {
 
                             this.versionChecked = true;
 
-                            if (this.shownVersionWarning) {
+                            if (shouldShowWarning && this.shownVersionWarning) {
                                 this.shownVersionWarning = false;
 
                                 window.showInformationMessage(
@@ -506,9 +508,11 @@ export class ExecutorBridge implements Disposable {
                         this._bridgeMessages.fire(`>>> Internal error while checking version: ${err}\n`);
                         this.versionChecked = false;
 
-                        window.showErrorMessage(
-                            'CodeChecker: Internal error while checking version - see logs for details'
-                        );
+                        if (shouldShowWarning) {
+                            window.showErrorMessage(
+                                'CodeChecker: Internal error while checking version - see logs for details'
+                            );
+                        }
                     }
 
                     break;
@@ -522,7 +526,7 @@ export class ExecutorBridge implements Disposable {
                     this._bridgeMessages.fire('>>> CodeChecker error while checking version\n');
                     this.versionChecked = false;
 
-                    if (!this.shownVersionWarning) {
+                    if (shouldShowWarning && !this.shownVersionWarning) {
                         this.shownVersionWarning = true;
                         let choice;
 
