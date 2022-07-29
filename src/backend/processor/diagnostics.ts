@@ -57,6 +57,7 @@ export class DiagnosticsApi {
 
     constructor(ctx: ExtensionContext) {
         ctx.subscriptions.push(this._diagnosticsUpdated = new EventEmitter());
+
         window.onDidChangeVisibleTextEditors(this.onDocumentsChanged, this, ctx.subscriptions);
         ExtensionApi.metadata.metadataUpdated(this.onMetadataUpdated, this, ctx.subscriptions);
 
