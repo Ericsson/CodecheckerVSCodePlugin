@@ -31,6 +31,12 @@ interface AnalyzerVersion {
 export class ExecutorBridge implements Disposable {
     private versionChecked = false;
     private shownVersionWarning = false;
+    private versionCheckInProgress = false;
+
+    private _versionCheckFinished: EventEmitter<boolean> = new EventEmitter();
+    private get versionCheckFinished(): Event<boolean> {
+        return this._versionCheckFinished.event;
+    }
 
     private databaseWatches: FileSystemWatcher[] = [];
     private databaseEvents: Disposable[] = [];
@@ -50,6 +56,7 @@ export class ExecutorBridge implements Disposable {
     public get databaseLocationChanged(): Event<void> {
         return this._databaseLocationChanged.event;
     }
+
 
     /** Automatically adds itself to ctx.subscriptions. */
     constructor(ctx: ExtensionContext) {
@@ -389,6 +396,18 @@ export class ExecutorBridge implements Disposable {
                 return;
             }
 
+            if (this.versionCheckInProgress) {
+                const disposable = this.versionCheckFinished((result) => {
+                    disposable.dispose();
+                    res(result);
+                });
+                return;
+            }
+
+            this.versionCheckInProgress = true;
+            const shouldShowWarning = workspace.getConfiguration('codechecker.executor')
+                .get<boolean>('enableVersionCheckNotifications');
+
             const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
             const commandArgs = this.getVersionCmdArgs();
 
@@ -396,6 +415,10 @@ export class ExecutorBridge implements Disposable {
                 this._bridgeMessages.fire('>>> Unable to determine CodeChecker version commandline\n');
 
                 this.versionChecked = false;
+
+                this.versionCheckInProgress = false;
+                this._versionCheckFinished.fire(this.versionChecked);
+
                 res(this.versionChecked);
                 return;
             }
@@ -427,7 +450,7 @@ export class ExecutorBridge implements Disposable {
 
                             this.versionChecked = false;
 
-                            if (!this.shownVersionWarning) {
+                            if (shouldShowWarning && !this.shownVersionWarning) {
                                 this.shownVersionWarning = true;
                                 let choice;
 
@@ -473,7 +496,7 @@ export class ExecutorBridge implements Disposable {
 
                             this.versionChecked = true;
 
-                            if (this.shownVersionWarning) {
+                            if (shouldShowWarning && this.shownVersionWarning) {
                                 this.shownVersionWarning = false;
 
                                 window.showInformationMessage(
@@ -485,9 +508,11 @@ export class ExecutorBridge implements Disposable {
                         this._bridgeMessages.fire(`>>> Internal error while checking version: ${err}\n`);
                         this.versionChecked = false;
 
-                        window.showErrorMessage(
-                            'CodeChecker: Internal error while checking version - see logs for details'
-                        );
+                        if (shouldShowWarning) {
+                            window.showErrorMessage(
+                                'CodeChecker: Internal error while checking version - see logs for details'
+                            );
+                        }
                     }
 
                     break;
@@ -501,7 +526,7 @@ export class ExecutorBridge implements Disposable {
                     this._bridgeMessages.fire('>>> CodeChecker error while checking version\n');
                     this.versionChecked = false;
 
-                    if (!this.shownVersionWarning) {
+                    if (shouldShowWarning && !this.shownVersionWarning) {
                         this.shownVersionWarning = true;
                         let choice;
 
@@ -541,6 +566,9 @@ export class ExecutorBridge implements Disposable {
                         }
                     }
                 }
+
+                this.versionCheckInProgress = false;
+                this._versionCheckFinished.fire(this.versionChecked);
 
                 res(this.versionChecked);
             });

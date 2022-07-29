@@ -110,7 +110,13 @@ export class ExecutorAlerts {
             break;
         case ProcessStatus.errored:
             this.statusBarItem.text = '$(testing-error-icon) CodeChecker: analysis errored';
-            window.showErrorMessage('CodeChecker finished with error - see logs for details');
+
+            const shouldShowError = workspace.getConfiguration('codechecker.executor')
+                .get<boolean>('enableVersionCheckNotifications');
+
+            if (shouldShowError) {
+                window.showErrorMessage('CodeChecker finished with error - see logs for details');
+            }
             break;
         default:
             break;
