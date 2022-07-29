@@ -15,6 +15,7 @@ export enum ProcessStatus {
 
 export enum ProcessType {
     analyze = 'CodeChecker analyze',
+    checkers = 'CodeChecker checkers',
     log = 'CodeChecker log',
     parse = 'CodeChecker parse',
     version = 'CodeChecker analyzer-version',
@@ -98,7 +99,7 @@ export class ScheduledProcess implements Disposable {
         this.processParameters = parameters ?? {};
 
         const processType = parameters?.processType ?? '';
-        const forwardDefaults: string[] = [ ProcessType.parse ];
+        const forwardDefaults: string[] = [ ProcessType.checkers, ProcessType.parse ];
 
         if (this.processParameters.forwardStdoutToLogs === undefined) {
             this.processParameters.forwardStdoutToLogs = !forwardDefaults.includes(processType);
@@ -210,8 +211,10 @@ export class ExecutorManager implements Disposable {
 
     private executionPriority = [
         ProcessType.version,
+        ProcessType.checkers,
         ProcessType.parse,
-        ProcessType.analyze
+        ProcessType.log,
+        ProcessType.analyze,
     ];
 
     /** Map of scheduled processes, indexed by its commonName.
