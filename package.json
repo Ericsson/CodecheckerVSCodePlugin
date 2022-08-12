@@ -150,6 +150,11 @@
           "description": "Enable CodeLens for displaying the reproduction path",
           "default": true
         },
+        "codechecker.executor.enableNotifications": {
+          "type": "boolean",
+          "description": "Enable CodeChecker-related notifications",
+          "default": true
+        },
         "codechecker.executor.runOnSave": {
           "type": "boolean",
           "description": "Controls auto-run of CodeChecker on save",

@@ -2,6 +2,7 @@ import { Event, EventEmitter, ExtensionContext, TextEditor, Uri, window } from '
 import { parseDiagnostics } from '../parser';
 import { CheckerMetadata, DiagnosticReport } from '../types';
 import { ExtensionApi } from '../api';
+import { shouldShowNotifications } from '../../utils/config';
 
 /**
  * API interface that provides Diagnostics data.
@@ -98,9 +99,12 @@ export class DiagnosticsApi {
         } catch (err: any) {
             console.error('Failed to read CodeChecker data');
             console.error(err);
-            window.showErrorMessage(
-                'Failed to read some CodeChecker diagnostic data\nCheck console for more details'
-            );
+
+            if (shouldShowNotifications()) {
+                window.showErrorMessage(
+                    'Failed to read some CodeChecker diagnostic data\nCheck console for more details'
+                );
+            }
             return;
         }
 
