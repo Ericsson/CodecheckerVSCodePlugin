@@ -197,7 +197,7 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
             const goToDocsItem = new ReportTreeItem('openDocs', 'Go to checker documentation', new ThemeIcon('book'));
             goToDocsItem.command = {
                 title: 'openDocs',
-                command: 'vscode.open',
+                command: 'codechecker.editor.openDocs',
                 arguments: [docUrl]
             };
 
