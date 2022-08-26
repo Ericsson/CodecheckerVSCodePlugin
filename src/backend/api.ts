@@ -4,9 +4,9 @@ import { DiagnosticsApi, MetadataApi } from './processor';
 
 export class ExtensionApi {
     static init(ctx: ExtensionContext): void {
-        this._metadata = new MetadataApi(ctx);
         this._executorManager = new ExecutorManager(ctx);
         this._executorBridge = new ExecutorBridge(ctx);
+        this._metadata = new MetadataApi(ctx);
         this._diagnostics = new DiagnosticsApi(ctx);
     }
 

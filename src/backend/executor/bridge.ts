@@ -179,6 +179,14 @@ export class ExecutorBridge implements Disposable {
         return args;
     }
 
+    public getCheckersCmdArgs(): string[] | undefined {
+        return [
+            'checkers',
+            '--details',
+            '--output', 'json',
+        ];
+    }
+
     public getLogCmdArgs(buildCommand?: string): string[] | undefined {
         if (!workspace.workspaceFolders?.length) {
             return undefined;
@@ -346,6 +354,34 @@ export class ExecutorBridge implements Disposable {
         }
 
         const process = new ScheduledProcess(ccPath, commandArgs, { processType: ProcessType.log });
+
+        ExtensionApi.executorManager.addToQueue(process, 'replace');
+    }
+
+    public async reloadCheckerData() {
+        if (!await this.checkVersion()) {
+            return;
+        }
+
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
+        const commandArgs = this.getCheckersCmdArgs();
+
+        if (commandArgs === undefined) {
+            return;
+        }
+
+        const process = new ScheduledProcess(ccPath, commandArgs, { processType: ProcessType.checkers });
+
+        // TODO: Find a better way to collect full process output
+        let processOutput = '';
+
+        process.processStdout((output) => processOutput += output);
+
+        process.processStatusChange((status) => {
+            if (status === ProcessStatus.finished) {
+                ExtensionApi.metadata.parseCheckerData(processOutput);
+            }
+        });
 
         ExtensionApi.executorManager.addToQueue(process, 'replace');
     }

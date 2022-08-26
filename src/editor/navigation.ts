@@ -1,4 +1,4 @@
-import { ExtensionContext, Position, Range, Uri, commands, window } from 'vscode';
+import { ExtensionContext, Position, Range, Uri, commands, env, window } from 'vscode';
 import { ExtensionApi } from '../backend/api';
 import { DiagnosticReport } from '../backend/types';
 
@@ -12,6 +12,15 @@ export class NavigationHandler {
         ctx.subscriptions.push(commands.registerCommand('codechecker.editor.jumpToStep', this.jumpToStep, this));
         ctx.subscriptions.push(commands.registerCommand('codechecker.editor.nextStep', this.nextStep, this));
         ctx.subscriptions.push(commands.registerCommand('codechecker.editor.previousStep', this.previousStep, this));
+        ctx.subscriptions.push(commands.registerCommand('codechecker.editor.openDocs', this.openDocs, this));
+    }
+
+    openDocs(docUrl: Uri | string) {
+        if (typeof docUrl === 'string') {
+            docUrl = Uri.parse(docUrl);
+        }
+
+        void env.openExternal(docUrl);
     }
 
     onDiagnosticsUpdated() {
