@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ExtensionApi } from './backend/api';
+import { ExtensionApi } from './backend';
 import { Editor } from './editor';
 import { SidebarContainer } from './sidebar';
 

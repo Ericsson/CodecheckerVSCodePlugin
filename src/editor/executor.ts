@@ -12,7 +12,8 @@ import {
 import { Editor } from '.';
 import { ExtensionApi } from '../backend';
 import { ProcessStatus } from '../backend/executor/process';
-import { getConfigAndReplaceVariables, shouldShowNotifications } from '../utils/config';
+import { getConfigAndReplaceVariables } from '../utils/config';
+import { NotificationType } from './notifications';
 
 export class ExecutorAlerts {
     private statusBarItem: StatusBarItem;
@@ -111,9 +112,10 @@ export class ExecutorAlerts {
         case ProcessStatus.errored:
             this.statusBarItem.text = '$(testing-error-icon) CodeChecker: analysis errored';
 
-            if (shouldShowNotifications()) {
-                window.showErrorMessage('CodeChecker finished with error - see logs for details');
-            }
+            Editor.notificationHandler.showNotification(
+                NotificationType.error,
+                'CodeChecker finished with error - see logs for details'
+            );
             break;
         default:
             break;

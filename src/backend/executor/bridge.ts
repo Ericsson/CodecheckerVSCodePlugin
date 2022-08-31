@@ -15,10 +15,11 @@ import { ExtensionApi } from '../api';
 import {
     getConfigAndReplaceVariables,
     parseShellArgsAndReplaceVariables,
-    replaceVariables,
-    shouldShowNotifications
+    replaceVariables
 } from '../../utils/config';
 import { ProcessStatus, ProcessType, ScheduledProcess } from '.';
+import { NotificationType } from '../../editor/notifications';
+import { Editor } from '../../editor';
 
 // Structure:
 //   CodeChecker analyzer version: \n {"base_package_version": "M.m.p", ...}
@@ -154,10 +155,10 @@ export class ExecutorBridge implements Disposable {
         const ccCompileCmd = this.getCompileCommandsPath();
 
         if (ccCompileCmd === undefined) {
-            if (shouldShowNotifications()) {
-                window.showWarningMessage(
-                    'No compilation database found, CodeChecker not started - see logs for details');
-            }
+            Editor.notificationHandler.showNotification(
+                NotificationType.warning,
+                'No compilation database found, CodeChecker not started - see logs for details'
+            );
             return undefined;
         }
 
@@ -491,20 +492,23 @@ export class ExecutorBridge implements Disposable {
 
                             this.versionChecked = false;
 
-                            if (shouldShowNotifications() && !this.shownVersionWarning) {
+                            if (!this.shownVersionWarning) {
                                 this.shownVersionWarning = true;
                                 let choice;
 
                                 while (choice !== 'Close') {
-                                    choice = await window.showWarningMessage(
+                                    choice = await Editor.notificationHandler.showNotification(
+                                        NotificationType.warning,
                                         `The CodeChecker version you are using (${version.join('.')}) ` +
                                             `is not supported. (Minimum supported version: ${minimum.join('.')}) ` +
                                             'Please update to the latest CodeChecker version, ' +
                                             'or check the extension settings.',
-                                        'Open releases',
-                                        'Installation guide',
-                                        'Open settings',
-                                        'Close'
+                                        { choices: [
+                                            'Open releases',
+                                            'Installation guide',
+                                            'Open settings',
+                                            'Close'
+                                        ] }
                                     );
 
                                     switch (choice) {
@@ -537,11 +541,13 @@ export class ExecutorBridge implements Disposable {
 
                             this.versionChecked = true;
 
-                            if (shouldShowNotifications() && this.shownVersionWarning) {
+                            if (this.shownVersionWarning) {
                                 this.shownVersionWarning = false;
 
-                                window.showInformationMessage(
-                                    `Found supported CodeChecker version ${version.join('.')}, enabled.`
+                                Editor.notificationHandler.showNotification(
+                                    NotificationType.information,
+                                    `Found supported CodeChecker version ${version.join('.')}, enabled.`,
+                                    { showOnTray: false }
                                 );
                             }
                         }
@@ -549,11 +555,10 @@ export class ExecutorBridge implements Disposable {
                         this._bridgeMessages.fire(`>>> Internal error while checking version: ${err}\n`);
                         this.versionChecked = false;
 
-                        if (shouldShowNotifications()) {
-                            window.showErrorMessage(
-                                'CodeChecker: Internal error while checking version - see logs for details'
-                            );
-                        }
+                        Editor.notificationHandler.showNotification(
+                            NotificationType.error,
+                            'CodeChecker: Internal error while checking version - see logs for details'
+                        );
                     }
 
                     break;
@@ -567,19 +572,22 @@ export class ExecutorBridge implements Disposable {
                     this._bridgeMessages.fire('>>> CodeChecker error while checking version\n');
                     this.versionChecked = false;
 
-                    if (shouldShowNotifications() && !this.shownVersionWarning) {
+                    if (!this.shownVersionWarning) {
                         this.shownVersionWarning = true;
 
                         let choice;
 
                         while (choice !== 'Close') {
-                            choice = await window.showWarningMessage(
+                            choice = await Editor.notificationHandler.showNotification(
+                                NotificationType.warning,
                                 'CodeChecker executable not found. ' +
                                     'Download CodeChecker, or check the extension settings.',
-                                'Open releases',
-                                'Installation guide',
-                                'Open settings',
-                                'Close'
+                                { choices: [
+                                    'Open releases',
+                                    'Installation guide',
+                                    'Open settings',
+                                    'Close'
+                                ] }
                             );
 
                             switch (choice) {

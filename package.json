@@ -89,6 +89,10 @@
       {
         "command": "codechecker.executor.stopCodeChecker",
         "title": "CodeChecker: Stop running CodeChecker instance"
+      },
+      {
+        "command": "codechecker.sidebar.clearNotifications",
+        "title": "CodeChecker: Clear notifications list"
       }
     ],
     "configuration": {
@@ -235,6 +239,12 @@
           "icon": "media/codechecker_logo.svg",
           "contextualTitle": "CodeChecker",
           "when": "codechecker.sidebar.showReports"
+        },
+        {
+          "id": "codechecker.views.notifications",
+          "name": "Recent notifications",
+          "icon": "media/codechecker_logo.svg",
+          "contextualTitle": "CodeChecker"
         }
       ]
     },

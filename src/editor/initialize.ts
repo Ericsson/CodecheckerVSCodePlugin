@@ -1,7 +1,7 @@
 import { ExtensionContext, commands, window, workspace } from 'vscode';
 import { ExtensionApi } from '../backend';
-import { shouldShowNotifications } from '../utils/config';
 import { Editor } from './editor';
+import { NotificationType } from './notifications';
 
 export class FolderInitializer {
     constructor(_ctx: ExtensionContext) {
@@ -21,10 +21,6 @@ export class FolderInitializer {
     }
 
     async showDialog() {
-        if (!shouldShowNotifications()) {
-            return;
-        }
-
         const workspaceFolder = workspace.workspaceFolders?.length && workspace.workspaceFolders[0].uri;
 
         if (!workspaceFolder) {
@@ -35,11 +31,14 @@ export class FolderInitializer {
             ? 'Compilation database not found. How would you like to proceed?'
             : 'Would you like to update the compilation database?';
 
-        const choice = await window.showInformationMessage(
+        const choice = await Editor.notificationHandler.showNotification(
+            NotificationType.information,
             choiceMessage,
-            'Run CodeChecker log',
-            'Locate',
-            'Don\'t show again'
+            { choices: [
+                'Run CodeChecker log',
+                'Locate',
+                'Don\'t show again'
+            ] }
         );
 
         switch (choice) {

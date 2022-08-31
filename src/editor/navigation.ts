@@ -1,5 +1,5 @@
 import { ExtensionContext, Position, Range, Uri, commands, env, window } from 'vscode';
-import { ExtensionApi } from '../backend/api';
+import { ExtensionApi } from '../backend';
 import { DiagnosticReport } from '../backend/types';
 
 export class NavigationHandler {
