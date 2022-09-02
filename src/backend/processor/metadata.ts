@@ -7,7 +7,6 @@ import {
     FileSystemWatcher,
     Uri,
     commands,
-    window,
     workspace
 } from 'vscode';
 import * as path from 'path';
@@ -225,9 +224,15 @@ export class MetadataApi implements Disposable {
             console.error(err);
 
             if (err instanceof SyntaxError) {
-                window.showErrorMessage('Failed to read CodeChecker checker data: Invalid format');
+                Editor.notificationHandler.showNotification(
+                    NotificationType.error,
+                    'Failed to read CodeChecker data: Invalid format'
+                );
             } else {
-                window.showErrorMessage('Failed to read CodeChecker checker data\nCheck console for more details');
+                Editor.notificationHandler.showNotification(
+                    NotificationType.error,
+                    'Failed to read CodeChecker data - check console for more details'
+                );
             }
 
             return;
