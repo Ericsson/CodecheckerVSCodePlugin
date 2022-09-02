@@ -1,4 +1,4 @@
-import { ConfigurationChangeEvent, ExtensionContext, window, workspace } from 'vscode';
+import { Command, ConfigurationChangeEvent, ExtensionContext, commands, window, workspace } from 'vscode';
 import { SidebarContainer } from '../sidebar';
 
 export enum NotificationType {
@@ -9,7 +9,7 @@ export enum NotificationType {
 
 export interface NotificationOptions {
     showOnTray?: boolean | 'always' // always bypasses the 'Show notifications' setting
-    choices?: string[]
+    choices?: Command[]
     showOnSidebar?: boolean,
     sidebarMessage?: string, // Same as popup message if not defined
 }
@@ -17,7 +17,6 @@ export interface NotificationOptions {
 export class NotificationHandler {
     private defaultOptions: NotificationOptions = {
         showOnTray: true,
-        choices: [],
         showOnSidebar: true,
     };
 
@@ -28,6 +27,8 @@ export class NotificationHandler {
             .get('enableNotifications') ?? true;
     }
 
+    // When a command option is clicked, the provided command in `options.choices` gets executed.
+    // If the tray notification was clicked, the choice is returned as well.
     public async showNotification(
         type: NotificationType, message: string, options?: NotificationOptions
     ): Promise<string | undefined> {
@@ -37,18 +38,30 @@ export class NotificationHandler {
         };
 
         if (options.showOnSidebar) {
-            SidebarContainer.notificationView.addNotification(type, options.sidebarMessage ?? message);
+            SidebarContainer.notificationView.addNotification(type, options.sidebarMessage ?? message, options.choices);
         }
 
         if (options.showOnTray === 'always' || (options.showOnTray && this.showTrayNotifications)) {
+            const choiceTitles = options.choices?.map((command) => command.title) ?? [];
+            let choice: string | undefined;
+
             switch (type) {
             case NotificationType.information:
-                return await window.showInformationMessage(message, ...options.choices!);
+                choice = await window.showInformationMessage(message, ...choiceTitles);
+                break;
             case NotificationType.warning:
-                return await window.showWarningMessage(message, ...options.choices!);
+                choice = await window.showWarningMessage(message, ...choiceTitles);
+                break;
             case NotificationType.error:
-                return await window.showErrorMessage(message, ...options.choices!);
+                choice = await window.showErrorMessage(message, ...choiceTitles);
+                break;
             }
+
+            const choiceCommand = options.choices!.find((command) => command.title === choice);
+            if (choiceCommand !== undefined && choiceCommand.command !== '') {
+                await commands.executeCommand(choiceCommand.command, ...(choiceCommand.arguments ?? []));
+            }
+            return choice;
         }
 
         return;

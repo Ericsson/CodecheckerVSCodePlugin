@@ -6,6 +6,7 @@ import {
     ThemeIcon,
     TreeDataProvider,
     TreeItem,
+    TreeItemCollapsibleState,
     TreeView,
     commands,
     window
@@ -15,12 +16,18 @@ import { CheckerMetadata } from '../../backend/types';
 import { NotificationType } from '../../editor/notifications';
 
 export class NotificationItem {
-    constructor(private label: string | (() => string), private iconPath?: string, private command?: Command) {}
+    constructor(
+        private label: string | (() => string), private iconPath?: string,
+        private command?: Command, private hasChildren: boolean = false
+    ) {}
 
     getTreeItem(): TreeItem | Promise<TreeItem> {
         const label = typeof this.label === 'string' ? this.label : this.label();
 
-        const node = new TreeItem(label);
+        const node = new TreeItem(
+            label,
+            this.hasChildren ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None
+        );
         node.command = this.command;
         node.iconPath = this.iconPath ? new ThemeIcon(this.iconPath) : undefined;
         node.description = this.command?.tooltip;
@@ -55,7 +62,7 @@ export class NotificationView implements TreeDataProvider<NotificationItem> {
         ]
     };
 
-    private notifications: NotificationItem[] = [];
+    private notifications: { notification: NotificationItem, commands: NotificationItem[] }[] = [];
 
     private itemsList: NotificationItem[][];
 
@@ -86,7 +93,7 @@ export class NotificationView implements TreeDataProvider<NotificationItem> {
 
     updateNotifications(_event?: CheckerMetadata | void) {
         if (this.notifications.length !== 0) {
-            this.itemsList = [this.topItems.default, this.notifications];
+            this.itemsList = [this.topItems.default, this.notifications.map((x) => x.notification)];
         } else {
             this.itemsList = [this.topItems.noNotifications];
         }
@@ -94,11 +101,20 @@ export class NotificationView implements TreeDataProvider<NotificationItem> {
         this._onDidChangeTreeData.fire();
     }
 
-    addNotification(type: NotificationType, message: string) {
-        this.notifications.unshift(new NotificationItem(
+    addNotification(type: NotificationType, message: string, choices?: Command[]) {
+        const notification = new NotificationItem(
             message,
-            this.notificationIcons[type]
-        ));
+            this.notificationIcons[type],
+            undefined,
+            choices !== undefined
+        );
+
+        // TODO: Allow specifying icons for every command
+        const commands = choices?.map(
+            (command) => new NotificationItem(command.title, undefined, command)
+        ) ?? [];
+
+        this.notifications.unshift({ notification, commands });
         this.updateNotifications();
     }
 
@@ -114,7 +130,7 @@ export class NotificationView implements TreeDataProvider<NotificationItem> {
 
     getChildren(element?: NotificationItem): NotificationItem[] {
         if (element !== undefined) {
-            return [];
+            return this.notifications.find((notif) => notif.notification === element)?.commands ?? [];
         }
 
         return this.itemsList.flat();
