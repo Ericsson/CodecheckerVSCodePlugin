@@ -156,7 +156,7 @@
         },
         "codechecker.executor.enableNotifications": {
           "type": "boolean",
-          "description": "Enable CodeChecker-related notifications",
+          "description": "Enable pop-up notifications. Past messages are accessible via the sidebar menu regardless of this setting.",
           "default": true
         },
         "codechecker.executor.runOnSave": {
