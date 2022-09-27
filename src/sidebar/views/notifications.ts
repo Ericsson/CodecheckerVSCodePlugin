@@ -15,18 +15,36 @@ import { ExtensionApi } from '../../backend';
 import { CheckerMetadata } from '../../backend/types';
 import { NotificationType } from '../../editor/notifications';
 
+export interface NotificationUpdateArgs {
+    type?: NotificationType | string,
+    message?: string | Command,
+    choices?: Command[] | NotificationItem[]
+}
+
 export class NotificationItem {
+    private label: string = '';
+    private iconPath?: string;
+    private command?: Command;
+    private _children: NotificationItem[] = [];
+    public get children(): readonly NotificationItem[] { return this._children; };
+
+    private notificationIcons: {[type in NotificationType]: string} = {
+        [NotificationType.information]: 'info',
+        [NotificationType.warning]: 'warning',
+        [NotificationType.error]: 'error'
+    };
+
     constructor(
-        private label: string | (() => string), private iconPath?: string,
-        private command?: Command, private hasChildren: boolean = false
-    ) {}
+        private view: NotificationView, type: NotificationType | string,
+        message: string | Command, choices?: Command[] | NotificationItem[]
+    ) {
+        this.silentUpdate({ type, message, choices });
+    }
 
     getTreeItem(): TreeItem | Promise<TreeItem> {
-        const label = typeof this.label === 'string' ? this.label : this.label();
-
         const node = new TreeItem(
-            label,
-            this.hasChildren ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None
+            this.label,
+            this.children.length > 0 ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None
         );
         node.command = this.command;
         node.iconPath = this.iconPath ? new ThemeIcon(this.iconPath) : undefined;
@@ -34,35 +52,60 @@ export class NotificationItem {
 
         return node;
     }
-}
 
+    update(args: NotificationUpdateArgs) {
+        this.silentUpdate(args);
+
+        this.view.updateNotifications();
+    }
+
+    silentUpdate(args: NotificationUpdateArgs) {
+        const { type, message, choices } = args;
+
+        if (type !== undefined) {
+            this.iconPath = typeof type === 'string' ? type : this.notificationIcons[type];
+        }
+
+        if (message !== undefined) {
+            if (typeof message === 'object') {
+                this.label = message.title;
+                this.command = message;
+            } else {
+                this.label = message;
+                this.command = undefined;
+            }
+        }
+
+        if (choices !== undefined) {
+            if (choices.length === 0 || choices[0] instanceof NotificationItem) {
+                this._children = [ ...choices as NotificationItem[] ];
+            } else {
+                this._children = (choices as Command[]).map(choice => new NotificationItem(this.view, '', choice));
+            }
+
+            this.command = undefined;
+        }
+    }
+}
 
 export class NotificationView implements TreeDataProvider<NotificationItem> {
     private tree?: TreeView<NotificationItem>;
-    private notificationIcons: {[type in NotificationType]: string} = {
-        [NotificationType.information]: 'info',
-        [NotificationType.warning]: 'warning',
-        [NotificationType.error]: 'error'
-    };
 
     private topItems: {[id: string]: NotificationItem[]} = {
         'default': [
             new NotificationItem(
-                'Clear notifications',
+                this,
                 'clear-all',
-                { title: 'clearNotifications', command: 'codechecker.sidebar.clearNotifications' }
+                { title: 'Clear notifications', command: 'codechecker.sidebar.clearNotifications' }
             ),
-            new NotificationItem('——')
+            new NotificationItem(this, '', '——')
         ],
         'noNotifications': [
-            new NotificationItem(
-                'No recent notifications',
-                'list-flat'
-            )
+            new NotificationItem(this, 'list-flat', 'No recent notifications')
         ]
     };
 
-    private notifications: { notification: NotificationItem, commands: NotificationItem[] }[] = [];
+    private notifications: NotificationItem[] = [];
 
     private itemsList: NotificationItem[][];
 
@@ -93,7 +136,7 @@ export class NotificationView implements TreeDataProvider<NotificationItem> {
 
     updateNotifications(_event?: CheckerMetadata | void) {
         if (this.notifications.length !== 0) {
-            this.itemsList = [this.topItems.default, this.notifications.map((x) => x.notification)];
+            this.itemsList = [this.topItems.default, this.notifications];
         } else {
             this.itemsList = [this.topItems.noNotifications];
         }
@@ -101,21 +144,19 @@ export class NotificationView implements TreeDataProvider<NotificationItem> {
         this._onDidChangeTreeData.fire();
     }
 
-    addNotification(type: NotificationType, message: string, choices?: Command[]) {
-        const notification = new NotificationItem(
-            message,
-            this.notificationIcons[type],
-            undefined,
-            choices !== undefined
-        );
+    // Adds either a pre-made notification to the sidebar, or creates one.
+    addNotification(
+        type: NotificationItem | NotificationType | string, message?: string | Command,
+        choices?: Command[] | NotificationItem[]
+    ): NotificationItem {
+        if (!(type instanceof NotificationItem)) {
+            type = new NotificationItem(this, type, message ?? '', choices);
+        }
 
-        // TODO: Allow specifying icons for every command
-        const commands = choices?.map(
-            (command) => new NotificationItem(command.title, undefined, command)
-        ) ?? [];
-
-        this.notifications.unshift({ notification, commands });
+        this.notifications.unshift(type);
         this.updateNotifications();
+
+        return type;
     }
 
     clearNotifications() {
@@ -130,7 +171,7 @@ export class NotificationView implements TreeDataProvider<NotificationItem> {
 
     getChildren(element?: NotificationItem): NotificationItem[] {
         if (element !== undefined) {
-            return this.notifications.find((notif) => notif.notification === element)?.commands ?? [];
+            return [ ...element.children ?? [] ];
         }
 
         return this.itemsList.flat();
