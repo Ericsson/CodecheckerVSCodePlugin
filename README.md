@@ -58,10 +58,12 @@ The extension provides the following commands:
 | `CodeChecker: Analyze current file` | Analyzes the currently opened source file using CodeChecker. Can also be called by clicking on the `Re-analyze current file` button in CodeChecker's side panel. <br> Useful when the `Run On Save` is turned off in the plugin's settings. |
 | `CodeChecker: Analyze selected files...` | Analyzes the files selected by the user, using CodeChecker. Accepts multiple files as input. |
 | `CodeChecker: Analyze entire project` | Analyzes the entire project using CodeChecker. Can also be called by clicking on the `Re-analyze entire project` button in CodeChecker's side panel.<br> *Warning:* A full analysis can take minutes, or even hours on larger projects. |
-| `CodeChecker: Stop analysis` | Stops the currently running analysis. Partial results are saved and updated. |
+| `CodeChecker: Stop running CodeChecker instance` | Stops the currently running analysis. Partial results are saved and updated. |
+| `CodeChecker: Run CodeChecker log` | Updates the compilation database, by building the current project. A variant with a custom user-specified build command is also available. |
+| `CodeChecker: Preview CodeChecker log in terminal` | The current CodeChecker log command is pasted into a new terminal window, where it can be edited before running it. |
 | `CodeChecker: Show database setup dialog` | Shows the dialog to select the path to an existing compilation database, or to create a new one. |
 | `CodeChecker: Next reproduction step`, <br> `CodeChecker: Previous reproduction step` | Moves between a displayed reproduction path's steps. You can also navigate directly to a report's step via CodeChecker's side panel. <br> Default keybinds: `Ctrl-F7`, `Ctrl-Shift-F7` respectively. |
-| `CodeChecker: Show full command line` | Shows the full CodeChecker command line used to analyze files. <br> Useful if you want to review the analyzer's options before running, or if you want to run the analysis manually. |
+| `CodeChecker: Show full CodeChecker analyze command line` | Shows the full CodeChecker command line used to analyze files. <br> Useful if you want to review the analyzer's options before running, or if you want to run the analysis manually. |
 | `CodeChecker: Show Output` | Focuses CodeChecker's output in the editor. The plugin's logs, as well as the output of previous CodeChecker runs are displayed here. |
 | `CodeChecker: Reload metadata` | Reloads CodeChecker's `metadata.json` file. Can also be called by clicking on the `Reload CodeChecker metadata` button on the CodeChecker's side panel. |
 
@@ -72,6 +74,8 @@ The analysis commands are also available in task form:
 | `{ type: "CodeChecker", taskType: "currentFile" }` | `CodeChecker: Analyze current file` |
 | `{ type: "CodeChecker", taskType: "selectedFiles", selectedFiles: [] }` | `CodeChecker: Analyze selected files...` <br> Selected files are listed in the `selectedFiles` array, using full paths. |
 | `{ type: "CodeChecker", taskType: "project" }` | `CodeChecker: Analyze entire project` |
+| `{ type: "CodeChecker log" }` | `CodeChecker: Run CodeChecker log` |
+| `{ type: "CodeChecker log", customBuildCommand: "..." }` | `CodeChecker: Run CodeChecker log with custom build command` |
 
 ## Settings
 
@@ -83,9 +87,12 @@ Since CodeChecker-related paths vary greatly between systems, the following sett
 | CodeChecker > Backend > Compilation database path <br> (default: *(empty)*) | Path to a custom compilation database, in case of a custom build system. The database setup dialog sets the path for the current workspace only. |
 | CodeChecker > Editor > Show database dialog <br> (default: `on`) | Controls the dialog when opening a workspace without a compilation database. |
 | CodeChecker > Editor > Enable CodeLens <br> (default: `on`) | Enable CodeLens for displaying the reproduction path in the editor. |
+| CodeChecker > Executor > Enable notifications <br> (default: `on`) | Enable CodeChecker-related toast notifications. |
 | CodeChecker > Executor > Executable path <br> (default: `CodeChecker`) | Path to the CodeChecker executable. Can be an executable in the `PATH` environment variable, or an absolute path to one. |
 | CodeChecker > Executor > Thread count <br> (default: *(empty)*) | CodeChecker's thread count - leave empty to use all threads. |
-| CodeChecker > Executor > Arguments <br> (default: *(empty)*) | Additional arguments to CodeChecker. For example, if you want to use a config file for CodeChecker pass '--config <config.json>'. For supported arguments, run `CodeChecker analyze --help`. <br> *Note:* The resulting command-line can be previewed with the command `CodeChecker: Show full command line`. |
+| CodeChecker > Executor > Arguments <br> (default: *(empty)*) | Additional arguments to `CodeChecker analyze`. For example, if you want to use a config file for CodeChecker pass '--config <config.json>'. For supported arguments, run `CodeChecker analyze --help`. <br> *Note:* The resulting command-line can be previewed with the command `CodeChecker: Show full CodeChecker analyze command line`. |
+| CodeChecker > Executor > Log build command <br> (default: `make`) | The default build command used when running `CodeChecker log` via commands or tasks. |
+| CodeChecker > Executor > Log Arguments <br> (default: *(empty)*) | Additional arguments to `CodeChecker log`. <br> *Note:* The resulting command-line can be previewed with the command `CodeChecker: Preview CodeChecker log in terminal`. |
 | CodeChecker > Executor > Run on save <br> (default: `on`) | Controls auto-run of CodeChecker on saving a file. |
 
 ## Development
