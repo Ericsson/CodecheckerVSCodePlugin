@@ -6,9 +6,12 @@ on:
     types: [published]
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
   build:
     name: Create extension
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
+    needs: [test]
 
     # Each registry should have the following fields:
     #   - name: unique extension id.
@@ -29,20 +32,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install Node.js
         uses: actions/setup-node@v1
         with:
-          node-version: 12.x
+          node-version: 16.x
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
-
-      - name: Run tests
-        uses: GabrielBB/xvfb-action@v1.0
-        with:
-          run: yarn run test
 
       - name: Get the version
         id: get_version
