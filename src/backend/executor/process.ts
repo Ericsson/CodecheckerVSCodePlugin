@@ -6,6 +6,8 @@ import { Disposable, Event, EventEmitter, ExtensionContext, workspace } from 'vs
 export enum ProcessStatus {
     notRunning,
     running,
+    // When added to the execution queue
+    queued,
     killed,
     finished,
     errored,
@@ -256,8 +258,8 @@ export class ExecutorManager implements Disposable {
         return this._processStatus;
     }
 
-    private _processStatusChange: EventEmitter<ProcessStatus> = new EventEmitter();
-    public get processStatusChange(): Event<ProcessStatus> {
+    private _processStatusChange: EventEmitter<[ProcessStatus, ScheduledProcess]> = new EventEmitter();
+    public get processStatusChange(): Event<[ProcessStatus, ScheduledProcess]> {
         return this._processStatusChange.event;
     }
 
@@ -270,20 +272,25 @@ export class ExecutorManager implements Disposable {
         this.clearQueue();
     }
 
-    private updateStatus(status: ProcessStatus) {
+    private updateStatus([status, process]: [ProcessStatus, ScheduledProcess]) {
         switch (status) {
         case ProcessStatus.removed:
-            this._processStatusChange.fire(status);
+            this._processStatusChange.fire([status, process]);
             break;
         case ProcessStatus.running:
-            this._processStatusChange.fire(ProcessStatus.running);
+            this._processStatusChange.fire([ProcessStatus.running, process]);
             break;
         default:
-            this._processStatusChange.fire(status);
-            const previousProcess = this.activeProcess;
-            this.activeProcess = undefined;
-            previousProcess?.dispose();
-            this.startNextProcess();
+            this._processStatusChange.fire([status, process]);
+            process.dispose();
+
+            if (process === this.activeProcess) {
+                this.activeProcess = undefined;
+                this.startNextProcess();
+            } else {
+                this.activeProcess?.startProcess();
+            }
+
             break;
         }
     }
@@ -305,25 +312,20 @@ export class ExecutorManager implements Disposable {
         }
 
         // The exact same task with the exact same commandline won't be added twice
-        if (namedQueue.some((queueItem) => queueItem.commandLine === process.commandLine)) {
-            // In Prepend mode, this means removing and re-adding to move the task to the front of the queue
-            if (method === 'prepend') {
-                for (const entry of namedQueue.filter((queueItem) => queueItem.commandLine === process.commandLine)) {
-                    entry.dispose();
-                }
-
-                namedQueue = namedQueue.filter((queueItem) => queueItem.commandLine !== process.commandLine);
-            } else {
-                // Otherwise, keep the process in the queue as is, to preserve its position
-                process.dispose();
-                this.startNextProcess();
-                return;
-            }
+        // In Prepend mode, this means removing and re-adding to move the task to the front of the queue
+        if (method === 'prepend') {
+            this.removeFromQueue(process);
+        // Otherwise, keep the process in the queue as is, to preserve its position
+        } else if (namedQueue.some((queueItem) => queueItem.commandLine === process.commandLine)) {
+            process.dispose();
+            this.startNextProcess();
+            return;
         }
 
         switch (method) {
         case 'replace':
             for (const entry of namedQueue) {
+                this.updateStatus([ProcessStatus.removed, entry]);
                 entry.dispose();
             }
 
@@ -338,16 +340,44 @@ export class ExecutorManager implements Disposable {
             break;
         }
 
+        this.updateStatus([ProcessStatus.queued, process]);
         this.queue.set(name, namedQueue);
 
         this.startNextProcess();
     }
 
+    public removeFromQueue(process: ScheduledProcess) {
+        const name = process.processParameters.processType!;
+        let namedQueue = this.queue.get(name) ?? [];
+
+        // Tasks with the exact same commandline will be removed from queue
+        if (namedQueue.some((queueItem) => queueItem.commandLine === process.commandLine)) {
+            for (const entry of namedQueue.filter((queueItem) => queueItem.commandLine === process.commandLine)) {
+                this.updateStatus([ProcessStatus.removed, entry]);
+                entry.dispose();
+            }
+
+            namedQueue = namedQueue.filter((queueItem) => queueItem.commandLine !== process.commandLine);
+        }
+    }
+
     /** Clears the entire queue, or just one name. */
     public clearQueue(name?: string) {
         if (name) {
+            for (const entry of this.queue.get(name) ?? []) {
+                this.updateStatus([ProcessStatus.removed, entry]);
+                entry.dispose();
+            }
+
             this.queue.set(name, []);
         } else {
+            for (const [, queue] of this.queue.entries()) {
+                for (const entry of queue) {
+                    this.updateStatus([ProcessStatus.removed, entry]);
+                    entry.dispose();
+                }
+            }
+
             this.queue.clear();
         }
     }
@@ -368,16 +398,14 @@ export class ExecutorManager implements Disposable {
 
             if (namedQueue.length !== 0) {
                 nextExecution = namedQueue[0];
-                this.queue.set(name, namedQueue.slice(1));
                 break;
             }
         }
 
         if (!nextExecution) {
-            for (const [name, namedQueue] of this.queue.entries()) {
+            for (const [, namedQueue] of this.queue.entries()) {
                 if (namedQueue.length !== 0) {
                     nextExecution = namedQueue[0];
-                    this.queue.set(name, namedQueue.slice(1));
                     break;
                 }
             }
@@ -387,7 +415,15 @@ export class ExecutorManager implements Disposable {
             return;
         }
 
-        this.activeProcess = nextExecution;
+        this.forceRunProcess(nextExecution);
+    }
+
+    public forceRunProcess(process: ScheduledProcess) {
+        this.removeFromQueue(process);
+
+        const oldProcess = this.activeProcess;
+
+        this.activeProcess = process;
         const { forwardStdoutToLogs } = this.activeProcess.processParameters;
 
         // All of these listeners will be disposed when activeProcess is disposed.
@@ -396,9 +432,13 @@ export class ExecutorManager implements Disposable {
         }
 
         this.activeProcess.processStderr(this._processStderr.fire, this._processStderr);
-        this.activeProcess.processStatusChange(this.updateStatus, this);
+        this.activeProcess.processStatusChange( (event) => this.updateStatus([event, this.activeProcess!]) );
 
-        this.activeProcess.startProcess();
+        if (oldProcess) {
+            oldProcess.killProcess();
+        } else {
+            this.activeProcess.startProcess();
+        }
     }
 
     public killProcess() {

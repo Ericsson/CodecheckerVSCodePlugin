@@ -94,7 +94,22 @@ export class ExecutorBridge implements Disposable {
         ctx.subscriptions.push(
             commands.registerCommand('codechecker.executor.runLogWithBuildCommand', this.runLogCustomCommand, this)
         );
-        ctx.subscriptions.push(commands.registerCommand('codechecker.executor.stopAnalysis', this.stopAnalysis, this));
+        ctx.subscriptions.push(
+            commands.registerCommand('codechecker.executor.clearQueue', this.stopAndClearQueue, this)
+        );
+        ctx.subscriptions.push(
+            commands.registerCommand('codechecker.executor.stopCodeChecker', this.stopCodeChecker, this)
+        );
+        ctx.subscriptions.push(commands.registerCommand(
+            'codechecker.executor.removeFromQueue',
+            ExtensionApi.executorManager.removeFromQueue,
+            ExtensionApi.executorManager
+        ));
+        ctx.subscriptions.push(commands.registerCommand(
+            'codechecker.executor.forceRunProcess',
+            ExtensionApi.executorManager.forceRunProcess,
+            ExtensionApi.executorManager
+        ));
 
         this.updateCompilationDatabasePaths();
         this.checkVersion();
@@ -368,7 +383,7 @@ export class ExecutorBridge implements Disposable {
         }
 
         // Kill the process, since the entire project is getting analyzed anyways
-        this.stopAnalysis();
+        this.stopAndClearQueue();
 
         const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
         const commandArgs = this.getAnalyzeCmdArgs();
@@ -409,7 +424,7 @@ export class ExecutorBridge implements Disposable {
         }
 
         // Kill the process, since the compilation database is getting overwritten
-        this.stopAnalysis();
+        this.stopAndClearQueue();
 
         const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
         const commandArgs = this.getLogCmdArgs(buildCommand);
@@ -451,15 +466,19 @@ export class ExecutorBridge implements Disposable {
         ExtensionApi.executorManager.addToQueue(process, 'replace');
     }
 
-    public stopAnalysis() {
+    public stopAndClearQueue() {
         ExtensionApi.executorManager.clearQueue(ProcessType.analyze);
         ExtensionApi.executorManager.clearQueue(ProcessType.log);
 
         const processType = ExtensionApi.executorManager.activeProcess?.processParameters.processType;
 
         if (processType === ProcessType.analyze || processType === ProcessType.log) {
-            ExtensionApi.executorManager.killProcess();
+            this.stopCodeChecker();
         }
+    }
+
+    public stopCodeChecker() {
+        ExtensionApi.executorManager.killProcess();
     }
 
     public async parseMetadata(...files: Uri[]) {
