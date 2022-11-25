@@ -138,6 +138,7 @@ export class NotificationHandler {
                 message: makeMessage('was killed'),
                 choices: []
             });
+            this.activeNotifications.delete(process.commandLine);
 
             break;
         }
@@ -172,6 +173,7 @@ export class NotificationHandler {
 
             break;
         }
+        default: break;
         }
     }
 

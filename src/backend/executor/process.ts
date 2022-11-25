@@ -278,7 +278,8 @@ export class ExecutorManager implements Disposable {
             this._processStatusChange.fire([status, process]);
             break;
         case ProcessStatus.running:
-            this._processStatusChange.fire([ProcessStatus.running, process]);
+        case ProcessStatus.queued:
+            this._processStatusChange.fire([status, process]);
             break;
         default:
             this._processStatusChange.fire([status, process]);
@@ -346,18 +347,23 @@ export class ExecutorManager implements Disposable {
         this.startNextProcess();
     }
 
-    public removeFromQueue(process: ScheduledProcess) {
+    public removeFromQueue(process: ScheduledProcess, silent: boolean = false) {
         const name = process.processParameters.processType!;
-        let namedQueue = this.queue.get(name) ?? [];
+        const namedQueue = this.queue.get(name) ?? [];
 
         // Tasks with the exact same commandline will be removed from queue
         if (namedQueue.some((queueItem) => queueItem.commandLine === process.commandLine)) {
-            for (const entry of namedQueue.filter((queueItem) => queueItem.commandLine === process.commandLine)) {
-                this.updateStatus([ProcessStatus.removed, entry]);
-                entry.dispose();
+            if (!silent) {
+                for (const entry of namedQueue.filter((queueItem) => queueItem.commandLine === process.commandLine)) {
+                    this.updateStatus([ProcessStatus.removed, entry]);
+                    entry.dispose();
+                }
             }
 
-            namedQueue = namedQueue.filter((queueItem) => queueItem.commandLine !== process.commandLine);
+            this.queue.set(
+                name,
+                namedQueue.filter((queueItem) => queueItem.commandLine !== process.commandLine)
+            );
         }
     }
 
@@ -419,7 +425,7 @@ export class ExecutorManager implements Disposable {
     }
 
     public forceRunProcess(process: ScheduledProcess) {
-        this.removeFromQueue(process);
+        this.removeFromQueue(process, true);
 
         const oldProcess = this.activeProcess;
 
