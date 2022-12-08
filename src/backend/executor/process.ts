@@ -316,6 +316,10 @@ export class ExecutorManager implements Disposable {
         // In Prepend mode, this means removing and re-adding to move the task to the front of the queue
         if (method === 'prepend') {
             this.removeFromQueue(process);
+
+            // Refresh the queue, as it could have been replaced by removeFromQueue
+            namedQueue = this.queue.get(name) ?? [];
+
         // Otherwise, keep the process in the queue as is, to preserve its position
         } else if (namedQueue.some((queueItem) => queueItem.commandLine === process.commandLine)) {
             process.dispose();
