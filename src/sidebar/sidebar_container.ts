@@ -1,10 +1,11 @@
 import { ExtensionContext } from 'vscode';
-import { OverviewView, ReportsView } from './views';
+import { NotificationView, OverviewView, ReportsView } from './views';
 
 export class SidebarContainer {
     static init(ctx: ExtensionContext): void {
         this._overviewView = new OverviewView(ctx);
         this._reportsView = new ReportsView(ctx);
+        this._notificationView = new NotificationView(ctx);
     }
 
     private static _overviewView: OverviewView;
@@ -15,5 +16,10 @@ export class SidebarContainer {
     private static _reportsView: ReportsView;
     public static get reportsView(): ReportsView {
         return this._reportsView;
+    }
+
+    private static _notificationView: NotificationView;
+    public static get notificationView(): NotificationView {
+        return this._notificationView;
     }
 }

@@ -89,6 +89,10 @@
       {
         "command": "codechecker.executor.stopCodeChecker",
         "title": "CodeChecker: Stop running CodeChecker instance"
+      },
+      {
+        "command": "codechecker.sidebar.clearNotifications",
+        "title": "CodeChecker: Clear notifications list"
       }
     ],
     "configuration": {
@@ -152,7 +156,7 @@
         },
         "codechecker.executor.enableNotifications": {
           "type": "boolean",
-          "description": "Enable CodeChecker-related notifications",
+          "description": "Enable pop-up notifications. Past messages are accessible via the sidebar menu regardless of this setting.",
           "default": true
         },
         "codechecker.executor.runOnSave": {
@@ -235,6 +239,12 @@
           "icon": "media/codechecker_logo.svg",
           "contextualTitle": "CodeChecker",
           "when": "codechecker.sidebar.showReports"
+        },
+        {
+          "id": "codechecker.views.notifications",
+          "name": "Recent notifications",
+          "icon": "media/codechecker_logo.svg",
+          "contextualTitle": "CodeChecker"
         }
       ]
     },

@@ -43,7 +43,3 @@ export function replaceVariables(pathLike?: string): string | undefined {
         .replace(/\${cwd}/g, process.cwd())
         .replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => process.env[envName] ?? '');
 }
-
-export function shouldShowNotifications(): boolean {
-    return workspace.getConfiguration('codechecker.executor').get<boolean>('enableNotifications') ?? true;
-}

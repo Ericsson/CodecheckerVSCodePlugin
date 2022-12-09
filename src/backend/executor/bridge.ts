@@ -15,10 +15,11 @@ import { ExtensionApi } from '../api';
 import {
     getConfigAndReplaceVariables,
     parseShellArgsAndReplaceVariables,
-    replaceVariables,
-    shouldShowNotifications
+    replaceVariables
 } from '../../utils/config';
 import { ProcessStatus, ProcessType, ScheduledProcess } from '.';
+import { NotificationType } from '../../editor/notifications';
+import { Editor } from '../../editor';
 
 // Structure:
 //   CodeChecker analyzer version: \n {"base_package_version": "M.m.p", ...}
@@ -154,10 +155,10 @@ export class ExecutorBridge implements Disposable {
         const ccCompileCmd = this.getCompileCommandsPath();
 
         if (ccCompileCmd === undefined) {
-            if (shouldShowNotifications()) {
-                window.showWarningMessage(
-                    'No compilation database found, CodeChecker not started - see logs for details');
-            }
+            Editor.notificationHandler.showNotification(
+                NotificationType.warning,
+                'No compilation database found, CodeChecker not started - see logs for details'
+            );
             return undefined;
         }
 
@@ -491,45 +492,51 @@ export class ExecutorBridge implements Disposable {
 
                             this.versionChecked = false;
 
-                            if (shouldShowNotifications() && !this.shownVersionWarning) {
+                            if (!this.shownVersionWarning) {
                                 this.shownVersionWarning = true;
+
+                                const notificationText = 'The CodeChecker version you are using ' +
+                                    `(${version.join('.')}) is not supported. ` +
+                                    `(Minimum supported version: ${minimum.join('.')}) ` +
+                                    'Please update to the latest CodeChecker version, ' +
+                                    'or check the extension settings.';
+                                const choices = [
+                                    {
+                                        title: 'Open releases',
+                                        command: 'vscode.open',
+                                        arguments: [Uri.parse('https://github.com/ericsson/codechecker/releases')]
+                                    },
+                                    {
+                                        title: 'Installation guide',
+                                        command: 'vscode.open',
+                                        arguments: [Uri.parse('https://github.com/ericsson/codechecker#install-guide')]
+                                    },
+                                    {
+                                        title: 'Open settings',
+                                        command: 'workbench.action.openSettings',
+                                        arguments: ['@ext:codechecker.codechecker']
+                                    },
+                                ];
+
+                                // Only send the notification once to the sidebar
+                                void Editor.notificationHandler.showNotification(
+                                    NotificationType.warning,
+                                    notificationText,
+                                    { choices, showOnTray: false }
+                                );
+
                                 let choice;
 
+                                // but keep open until closed on the tray
                                 while (choice !== 'Close') {
-                                    choice = await window.showWarningMessage(
-                                        `The CodeChecker version you are using (${version.join('.')}) ` +
-                                            `is not supported. (Minimum supported version: ${minimum.join('.')}) ` +
-                                            'Please update to the latest CodeChecker version, ' +
-                                            'or check the extension settings.',
-                                        'Open releases',
-                                        'Installation guide',
-                                        'Open settings',
-                                        'Close'
-                                    );
-
-                                    switch (choice) {
-                                    case 'Open releases':
-                                        commands.executeCommand(
-                                            'vscode.open',
-                                            Uri.parse('https://github.com/ericsson/codechecker/releases')
-                                        );
-                                        break;
-                                    case 'Installation guide':
-                                        commands.executeCommand(
-                                            'vscode.open',
-                                            Uri.parse('https://github.com/ericsson/codechecker#install-guide')
-                                        );
-                                        break;
-                                    case 'Open settings':
-                                        commands.executeCommand(
-                                            'workbench.action.openSettings',
-                                            '@ext:codechecker.codechecker'
-                                        );
-                                        break;
-                                    default:
-                                        choice = 'Close';
-                                        break;
-                                    }
+                                    choice = await Editor.notificationHandler.showNotification(
+                                        NotificationType.warning,
+                                        notificationText,
+                                        {
+                                            choices: [...choices, { title: 'Close', command: '' }],
+                                            showOnSidebar: false
+                                        }
+                                    ) ?? 'Close'; // user presses the X
                                 }
                             }
                         } else {
@@ -537,11 +544,13 @@ export class ExecutorBridge implements Disposable {
 
                             this.versionChecked = true;
 
-                            if (shouldShowNotifications() && this.shownVersionWarning) {
+                            if (this.shownVersionWarning) {
                                 this.shownVersionWarning = false;
 
-                                window.showInformationMessage(
-                                    `Found supported CodeChecker version ${version.join('.')}, enabled.`
+                                Editor.notificationHandler.showNotification(
+                                    NotificationType.information,
+                                    `Found supported CodeChecker version ${version.join('.')}, enabled.`,
+                                    { showOnTray: false }
                                 );
                             }
                         }
@@ -549,11 +558,10 @@ export class ExecutorBridge implements Disposable {
                         this._bridgeMessages.fire(`>>> Internal error while checking version: ${err}\n`);
                         this.versionChecked = false;
 
-                        if (shouldShowNotifications()) {
-                            window.showErrorMessage(
-                                'CodeChecker: Internal error while checking version - see logs for details'
-                            );
-                        }
+                        Editor.notificationHandler.showNotification(
+                            NotificationType.error,
+                            'CodeChecker: Internal error while checking version - see logs for details'
+                        );
                     }
 
                     break;
@@ -567,44 +575,48 @@ export class ExecutorBridge implements Disposable {
                     this._bridgeMessages.fire('>>> CodeChecker error while checking version\n');
                     this.versionChecked = false;
 
-                    if (shouldShowNotifications() && !this.shownVersionWarning) {
+                    if (!this.shownVersionWarning) {
                         this.shownVersionWarning = true;
+
+                        const notificationText = 'CodeChecker executable not found. ' +
+                            'Download CodeChecker, or check the extension settings.';
+                        const choices = [
+                            {
+                                title: 'Open releases',
+                                command: 'vscode.open',
+                                arguments: [Uri.parse('https://github.com/ericsson/codechecker/releases')]
+                            },
+                            {
+                                title: 'Installation guide',
+                                command: 'vscode.open',
+                                arguments: [Uri.parse('https://github.com/ericsson/codechecker#install-guide')]
+                            },
+                            {
+                                title: 'Open settings',
+                                command: 'workbench.action.openSettings',
+                                arguments: ['@ext:codechecker.codechecker']
+                            }
+                        ];
+
+                        // Only send the notification once to the sidebar
+                        void Editor.notificationHandler.showNotification(
+                            NotificationType.warning,
+                            notificationText,
+                            { choices, showOnTray: false }
+                        );
 
                         let choice;
 
+                        // but keep open until closed on the tray
                         while (choice !== 'Close') {
-                            choice = await window.showWarningMessage(
-                                'CodeChecker executable not found. ' +
-                                    'Download CodeChecker, or check the extension settings.',
-                                'Open releases',
-                                'Installation guide',
-                                'Open settings',
-                                'Close'
-                            );
-
-                            switch (choice) {
-                            case 'Open releases':
-                                commands.executeCommand(
-                                    'vscode.open',
-                                    Uri.parse('https://github.com/ericsson/codechecker/releases')
-                                );
-                                break;
-                            case 'Installation guide':
-                                commands.executeCommand(
-                                    'vscode.open',
-                                    Uri.parse('https://github.com/ericsson/codechecker#install-guide')
-                                );
-                                break;
-                            case 'Open settings':
-                                commands.executeCommand(
-                                    'workbench.action.openSettings',
-                                    '@ext:codechecker.codechecker'
-                                );
-                                break;
-                            default:
-                                choice = 'Close';
-                                break;
-                            }
+                            choice = await Editor.notificationHandler.showNotification(
+                                NotificationType.warning,
+                                notificationText,
+                                {
+                                    choices: [...choices, { title: 'Close', command: '' }],
+                                    showOnSidebar: false
+                                }
+                            ) ?? 'Close'; // user presses the X
                         }
                     }
                 }

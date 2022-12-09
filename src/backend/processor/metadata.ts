@@ -7,14 +7,14 @@ import {
     FileSystemWatcher,
     Uri,
     commands,
-    window,
     workspace
 } from 'vscode';
 import * as path from 'path';
 import { ExtensionApi } from '../api';
 import { parseCheckerData, parseMetadata } from '../parser';
 import { CheckerData, CheckerMetadata } from '../types';
-import { shouldShowNotifications } from '../../utils/config';
+import { Editor } from '../../editor';
+import { NotificationType } from '../../editor/notifications';
 
 export class MetadataApi implements Disposable {
     private _metadata?: CheckerMetadata;
@@ -110,9 +110,10 @@ export class MetadataApi implements Disposable {
             .catch((err) => {
                 console.log(err);
 
-                if (shouldShowNotifications()) {
-                    window.showErrorMessage('Unexpected error when reloading metadata\nCheck console for more details');
-                }
+                Editor.notificationHandler.showNotification(
+                    NotificationType.error,
+                    'Unexpected error when reloading metadata\nCheck console for more details'
+                );
             });
     }
 
@@ -127,20 +128,21 @@ export class MetadataApi implements Disposable {
         let precheckFailed = false;
 
         if (!this.metadataPath) {
-            if (shouldShowNotifications()) {
-                window.showWarningMessage(
-                    'Metadata folder has invalid path\n' +
-                    'Please change `CodeChecker > Backend > Output folder path` in the settings'
-                );
-            }
+            Editor.notificationHandler.showNotification(
+                NotificationType.warning,
+                'Metadata folder has invalid path\n' +
+                'Please change `CodeChecker > Backend > Output folder path` in the settings'
+            );
 
             precheckFailed = true;
         }
 
         if (!workspace.workspaceFolders?.length) {
-            if (shouldShowNotifications()) {
-                window.showInformationMessage('CodeChecker is disabled - open a workspace to get started');
-            }
+            Editor.notificationHandler.showNotification(
+                NotificationType.information,
+                'CodeChecker is disabled - open a workspace to get started',
+                { showOnTray: false }
+            );
 
             precheckFailed = true;
         }
@@ -166,9 +168,10 @@ export class MetadataApi implements Disposable {
             case 'UnsupportedVersion':
                 console.error(err);
 
-                if (shouldShowNotifications()) {
-                    window.showErrorMessage(`Failed to read CodeChecker metadata: ${err.message}`);
-                }
+                Editor.notificationHandler.showNotification(
+                    NotificationType.error,
+                    `Failed to read CodeChecker metadata: ${err.message}`
+                );
 
                 break;
 
@@ -177,17 +180,19 @@ export class MetadataApi implements Disposable {
 
                 // File format errors
                 if (err instanceof SyntaxError) {
-                    if (shouldShowNotifications()) {
-                        window.showErrorMessage('Failed to read CodeChecker metadata: Invalid format');
-                    }
+                    Editor.notificationHandler.showNotification(
+                        NotificationType.error,
+                        'Failed to read CodeChecker metadata: Invalid format'
+                    );
 
                     break;
                 }
 
                 // Misc. errors
-                if (shouldShowNotifications()) {
-                    window.showErrorMessage('Failed to read CodeChecker metadata\nCheck console for more details');
-                }
+                Editor.notificationHandler.showNotification(
+                    NotificationType.error,
+                    'Failed to read CodeChecker metadata\nCheck console for more details'
+                );
 
                 break;
             }
@@ -219,9 +224,15 @@ export class MetadataApi implements Disposable {
             console.error(err);
 
             if (err instanceof SyntaxError) {
-                window.showErrorMessage('Failed to read CodeChecker checker data: Invalid format');
+                Editor.notificationHandler.showNotification(
+                    NotificationType.error,
+                    'Failed to read CodeChecker data: Invalid format'
+                );
             } else {
-                window.showErrorMessage('Failed to read CodeChecker checker data\nCheck console for more details');
+                Editor.notificationHandler.showNotification(
+                    NotificationType.error,
+                    'Failed to read CodeChecker data - check console for more details'
+                );
             }
 
             return;

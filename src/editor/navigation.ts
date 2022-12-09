@@ -1,6 +1,8 @@
 import { ExtensionContext, Position, Range, Uri, commands, env, window } from 'vscode';
-import { ExtensionApi } from '../backend/api';
+import { ExtensionApi } from '../backend';
 import { DiagnosticReport } from '../backend/types';
+import { Editor } from './editor';
+import { NotificationType } from './notifications';
 
 export class NavigationHandler {
     // The step index keyboard navigation is currently on.
@@ -70,7 +72,14 @@ export class NavigationHandler {
         });
 
         if (diagnostic === undefined) {
-            window.showInformationMessage('Unable to find specified bug, opened its file instead');
+            Editor.notificationHandler.showNotification(
+                NotificationType.information,
+                'Unable to find specified report, opened its file instead',
+                {
+                    sidebarMessage: `Unable to find specified report in file: ${targetFile.fsPath}`,
+                    showOnTray: 'always'
+                }
+            );
         } else if (diagnostic === ExtensionApi.diagnostics.selectedEntry?.diagnostic) {
             // With the repr. path open, the report is always the last step
             this.currentStepIndex = diagnostic.bug_path_events.length - 1;
@@ -103,9 +112,23 @@ export class NavigationHandler {
         });
 
         if (diagnostic === undefined) {
-            window.showInformationMessage('Unable to find specified report, opened its file instead');
+            Editor.notificationHandler.showNotification(
+                NotificationType.information,
+                'Unable to find specified report, opened its file instead',
+                {
+                    sidebarMessage: `Unable to find specified report in file: ${targetFile.fsPath}`,
+                    showOnTray: 'always'
+                }
+            );
         } else if (step === undefined) {
-            window.showInformationMessage('Unable to find specified reproduction step, opened the report instead');
+            Editor.notificationHandler.showNotification(
+                NotificationType.information,
+                'Unable to find specified reproduction step, opened the report instead',
+                {
+                    sidebarMessage: `Unable to find reproduction step in file: ${targetFile.fsPath}`,
+                    showOnTray: 'always'
+                }
+            );
             // With the repr. path open, the report is always the last step
             this.currentStepIndex = diagnostic.bug_path_events.length - 1;
         } else {

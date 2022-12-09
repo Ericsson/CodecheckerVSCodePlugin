@@ -1,11 +1,14 @@
 import { ExtensionContext, commands, window, workspace } from 'vscode';
 import { ExtensionApi } from '../backend';
-import { shouldShowNotifications } from '../utils/config';
 import { Editor } from './editor';
+import { NotificationType } from './notifications';
 
 export class FolderInitializer {
     constructor(_ctx: ExtensionContext) {
         commands.registerCommand('codechecker.editor.showSetupDialog', this.showDialog, this);
+
+        commands.registerCommand('codechecker.internal.locateCompilationDatabase', this.locateDatabase, this);
+        commands.registerCommand('codechecker.internal.disableDatabaseDialog', this.disableDialog, this);
 
         this.showDialogIfAvailable()
             .catch((err) => console.error(err));
@@ -21,52 +24,71 @@ export class FolderInitializer {
     }
 
     async showDialog() {
-        if (!shouldShowNotifications()) {
-            return;
-        }
-
         const workspaceFolder = workspace.workspaceFolders?.length && workspace.workspaceFolders[0].uri;
 
         if (!workspaceFolder) {
             return;
         }
 
-        const choiceMessage = ExtensionApi.executorBridge.getCompileCommandsPath() === undefined
+        const notificationText = ExtensionApi.executorBridge.getCompileCommandsPath() === undefined
             ? 'Compilation database not found. How would you like to proceed?'
             : 'Would you like to update the compilation database?';
+        const choices = [
+            {
+                title: 'Run CodeChecker log',
+                command: 'codechecker.executor.previewLogInTerminal'
+            },
+            {
+                title: 'Locate',
+                command: 'codechecker.internal.locateCompilationDatabase'
+            }
+        ];
+        const disableDialogChoice = {
+            title: 'Don\'t show again',
+            command: 'codechecker.internal.disableDatabaseDialog'
+        };
 
-        const choice = await window.showInformationMessage(
-            choiceMessage,
-            'Run CodeChecker log',
-            'Locate',
-            'Don\'t show again'
+        // Only send the notification once to the sidebar
+        void Editor.notificationHandler.showNotification(
+            NotificationType.information,
+            notificationText,
+            { choices, showOnTray: false }
         );
 
-        switch (choice) {
-        case 'Run CodeChecker log':
-            return await Editor.executorAlerts.showLogInTerminal();
-        case 'Locate':
-            const filePath = await window.showOpenDialog({ canSelectFiles: true });
-            if (!filePath || filePath.length === 0) {
-                break;
+        let shouldShowDialog = true;
+
+        // but keep open until closed on the tray
+        while (shouldShowDialog) {
+            const choice = await Editor.notificationHandler.showNotification(
+                NotificationType.warning,
+                notificationText,
+                {
+                    choices: [...choices, disableDialogChoice],
+                    showOnSidebar: false
+                }
+            );
+
+            // Show again next time this workspace is opened (if the user did not disable it)
+            if (choice === undefined || choice === disableDialogChoice.title) {
+                return;
             }
 
-            workspace.getConfiguration('codechecker.backend').update('compilationDatabasePath', filePath[0].fsPath);
-            return;
-        case 'Don\'t show again':
-            workspace.getConfiguration('codechecker.editor').update('showDatabaseDialog', false);
-            return;
-        default:
-            // Show again next time this workspace is opened
+            // If initialization failed, show notification again
+            shouldShowDialog = ExtensionApi.executorBridge.getCompileCommandsPath() === undefined &&
+                workspace.getConfiguration('codechecker.editor').get('showDatabaseDialog') !== false;
+        }
+    }
+
+    async locateDatabase() {
+        const filePath = await window.showOpenDialog({ canSelectFiles: true });
+        if (!filePath || filePath.length === 0) {
             return;
         }
 
-        // If initialization failed, show notification again
-        if (
-            ExtensionApi.executorBridge.getAnalyzeCmdArgs() === undefined &&
-            workspace.getConfiguration('codechecker.editor').get('showDatabaseDialog') !== false
-        ) {
-            await this.showDialog();
-        }
+        workspace.getConfiguration('codechecker.backend').update('compilationDatabasePath', filePath[0].fsPath);
+    }
+
+    disableDialog() {
+        workspace.getConfiguration('codechecker.editor').update('showDatabaseDialog', false);
     }
 }

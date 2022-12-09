@@ -5,10 +5,12 @@ import { ExecutorAlerts } from './executor';
 import { FolderInitializer } from './initialize';
 import { LoggerPanel } from './logger';
 import { NavigationHandler } from './navigation';
+import { NotificationHandler } from './notifications';
 import { AnalyzeTaskProvider, LogTaskProvider } from './tasks';
 
 export class Editor {
     static init(ctx: ExtensionContext): void {
+        this._notificationHandler = new NotificationHandler(ctx);
         this._diagnosticRenderer = new DiagnosticRenderer(ctx);
         this._navigationHandler = new NavigationHandler(ctx);
         this._codeLensStepsProvider = new CodeLensStepsProvider(ctx);
@@ -17,6 +19,11 @@ export class Editor {
         this._folderInitializer = new FolderInitializer(ctx);
         this._analyzeTaskProvider = new AnalyzeTaskProvider(ctx);
         this._logTaskProvider = new LogTaskProvider(ctx);
+    }
+
+    private static _notificationHandler: NotificationHandler;
+    public static get notificationHandler(): NotificationHandler {
+        return this._notificationHandler;
     }
 
     private static _diagnosticRenderer: DiagnosticRenderer;

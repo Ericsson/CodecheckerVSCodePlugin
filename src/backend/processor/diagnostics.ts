@@ -2,7 +2,8 @@ import { Event, EventEmitter, ExtensionContext, TextEditor, Uri, window } from '
 import { parseDiagnostics } from '../parser';
 import { CheckerMetadata, DiagnosticReport } from '../types';
 import { ExtensionApi } from '../api';
-import { shouldShowNotifications } from '../../utils/config';
+import { Editor } from '../../editor';
+import { NotificationType } from '../../editor/notifications';
 
 /**
  * API interface that provides Diagnostics data.
@@ -100,11 +101,11 @@ export class DiagnosticsApi {
             console.error('Failed to read CodeChecker data');
             console.error(err);
 
-            if (shouldShowNotifications()) {
-                window.showErrorMessage(
-                    'Failed to read some CodeChecker diagnostic data\nCheck console for more details'
-                );
-            }
+            Editor.notificationHandler.showNotification(
+                NotificationType.error,
+                'Failed to read some CodeChecker diagnostic data\nCheck console for more details'
+            );
+
             return;
         }
 

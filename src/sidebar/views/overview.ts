@@ -9,7 +9,7 @@ import {
     TreeView,
     window
 } from 'vscode';
-import { ExtensionApi } from '../../backend/api';
+import { ExtensionApi } from '../../backend';
 import { CheckerMetadata } from '../../backend/types';
 
 export class OverviewItem {
