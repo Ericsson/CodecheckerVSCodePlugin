@@ -48,6 +48,7 @@ export class ExecutorBridge implements Disposable {
     private databaseWatches: FileSystemWatcher[] = [];
     private databaseEvents: Disposable[] = [];
     private compilationDatabasePaths: (string | undefined)[] = [];
+    private folderSpecificCompilationDatabasePaths: {[path: string]: (string | undefined)[]} = {};
 
     /** Every line should have a newline at the end */
     private _bridgeMessages: EventEmitter<string> = new EventEmitter();
@@ -116,7 +117,7 @@ export class ExecutorBridge implements Disposable {
      * database paths.
      * Otherwise, it will return undefined.
      */
-    public getCompileCommandsPath() {
+    public getCompileCommandsPath(workspaceFolder?: string) {
         if (!workspace.workspaceFolders?.length) {
             return undefined;
         }
@@ -129,6 +130,17 @@ export class ExecutorBridge implements Disposable {
             }
         }
 
+        if (workspaceFolder) {
+            for (const filePath of this.folderSpecificCompilationDatabasePaths[workspaceFolder]) {
+                if (filePath && fs.existsSync(filePath)) {
+                    this._bridgeMessages.fire(
+                        `>>> Database found at path: ${filePath} for workspace: ${workspaceFolder} \n`
+                    );
+                    return filePath;
+                }
+            }
+        }
+
         this._bridgeMessages.fire('>>> No database found in the following paths:\n');
         for (const filePath of this.compilationDatabasePaths) {
             if (filePath) {
@@ -136,6 +148,16 @@ export class ExecutorBridge implements Disposable {
             } else {
                 this._bridgeMessages.fire('>>>   <no path set in settings>\n');
             }
+        }
+
+        if (workspaceFolder) {
+            for (const filePath of this.folderSpecificCompilationDatabasePaths[workspaceFolder]) {
+                if (filePath) {
+                    this._bridgeMessages.fire(`>>>   ${filePath}\n`);
+                }
+            }
+        } else {
+            this._bridgeMessages.fire('>>>   <no workspace folder searched>\n');
         }
 
         return undefined;
@@ -153,7 +175,14 @@ export class ExecutorBridge implements Disposable {
         const ccArguments = parseShellArgsAndReplaceVariables(ccArgumentsSetting ?? '');
 
         const ccThreads = workspace.getConfiguration('codechecker.executor').get<string>('threadCount');
-        const ccCompileCmd = this.getCompileCommandsPath();
+        // FIXME: Add support for selecting a specific workspace folder
+        const ccCompileCmd = this.getCompileCommandsPath(
+            files.length === 0
+                ? workspace.workspaceFolders[0].uri.fsPath
+                : files.length === 1
+                    ? workspace.getWorkspaceFolder(files[0])?.uri.fsPath
+                    : undefined
+        );
 
         const args = [
             'analyze',
@@ -165,6 +194,7 @@ export class ExecutorBridge implements Disposable {
         }
 
         if (ccCompileCmd === undefined) {
+            // Multi-root support added in CodeChecker 6.22.0
             if (this.checkedVersion < [6, 22, 0]) {
                 Editor.notificationHandler.showNotification(
                     NotificationType.warning,
@@ -181,8 +211,10 @@ export class ExecutorBridge implements Disposable {
             } else {
                 Editor.notificationHandler.showNotification(
                     NotificationType.warning,
+                    'No compilation database found, CodeChecker not started - ' +
                     'Analyzing multiple files at once is only supported with a compilation database'
                 );
+                return undefined;
             }
         } else {
             args.push(ccCompileCmd);
@@ -653,24 +685,32 @@ export class ExecutorBridge implements Disposable {
             return;
         }
 
-        // FIXME: Support multiple workspaces
-        const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
-
-        const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
-            ?? path.join(workspaceFolder, '.codechecker');
-
-        // It will try to find compilation databases in these directories automatically. The order is important because
-        // the first finding will be used.
-        const dbRootDirPaths = [ccFolder, workspaceFolder, path.join(workspaceFolder, 'build')];
-        const dbFileNames = ['compile_commands.json', 'compile_cmd.json'];
-
         this.compilationDatabasePaths = [
-            getConfigAndReplaceVariables('codechecker.backend', 'compilationDatabasePath'),
-            ...dbRootDirPaths.reduce((dbFilePaths: string[], dirName: string) => {
-                dbFileNames.forEach(fileName => dbFilePaths.push(path.join(dirName, fileName)));
-                return dbFilePaths;
-            }, [])
+            getConfigAndReplaceVariables('codechecker.backend', 'compilationDatabasePath')
         ];
+
+        this.folderSpecificCompilationDatabasePaths = {};
+
+        for (const folder of workspace.workspaceFolders) {
+            const folderPath = folder.uri.fsPath;
+
+            // It will try to find compilation databases in these directories automatically. The order is important
+            // because the first finding will be used.
+            const dbRootDirPaths = [
+                path.join(folderPath, '.codechecker'),
+                folderPath,
+                path.join(folderPath, 'build')
+            ];
+            const dbFileNames = ['compile_commands.json', 'compile_cmd.json'];
+
+            this.folderSpecificCompilationDatabasePaths[folderPath] = [
+                ...dbRootDirPaths.reduce((dbFilePaths: string[], dirName: string) => {
+                    dbFileNames.forEach(fileName => dbFilePaths.push(path.join(dirName, fileName)));
+                    return dbFilePaths;
+                }, [])
+            ];
+        }
+
 
         this.databaseEvents.forEach(watch => watch.dispose());
         this.databaseWatches.forEach(watch => watch.dispose());
@@ -678,6 +718,14 @@ export class ExecutorBridge implements Disposable {
         this.databaseWatches = this.compilationDatabasePaths
             .filter(x => x !== undefined)
             .map(path => workspace.createFileSystemWatcher(path!));
+
+        this.databaseWatches.push(...Object.values(this.folderSpecificCompilationDatabasePaths)
+            .reduce((fileSystemWatchers, paths) => {
+                paths.filter(x => x !== undefined)
+                    .forEach(path => fileSystemWatchers.push(workspace.createFileSystemWatcher(path!)));
+                return fileSystemWatchers;
+            }, [] as FileSystemWatcher[])
+        );
 
         for (const watch of this.databaseWatches) {
             this.databaseEvents.push(watch.onDidCreate(() => this._databaseLocationChanged.fire()));
