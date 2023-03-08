@@ -35,12 +35,13 @@ interface AnalyzerVersion {
 }
 
 export class ExecutorBridge implements Disposable {
-    private versionChecked = false;
+    /** False marks that CodeChecker was not found, or we have not checked yet */
+    private checkedVersion: number[] | false = false;
     private shownVersionWarning = false;
     private versionCheckInProgress = false;
 
-    private _versionCheckFinished: EventEmitter<boolean> = new EventEmitter();
-    private get versionCheckFinished(): Event<boolean> {
+    private _versionCheckFinished: EventEmitter<number[] | false> = new EventEmitter();
+    private get versionCheckFinished(): Event<number[] | false> {
         return this._versionCheckFinished.event;
     }
 
@@ -154,28 +155,44 @@ export class ExecutorBridge implements Disposable {
         const ccThreads = workspace.getConfiguration('codechecker.executor').get<string>('threadCount');
         const ccCompileCmd = this.getCompileCommandsPath();
 
-        if (ccCompileCmd === undefined) {
-            Editor.notificationHandler.showNotification(
-                NotificationType.warning,
-                'No compilation database found, CodeChecker not started - see logs for details'
-            );
-            return undefined;
-        }
-
-        const filePaths = files.length
-            ? ['--file', ...files.map((uri) => uri.fsPath)]
-            : [];
-
         const args = [
-            'analyze', ccCompileCmd,
-            '--output', reportsFolder,
+            'analyze',
+            '--output', reportsFolder
         ];
 
         if (ccThreads) {
             args.push('-j', ccThreads);
         }
 
-        args.push(...ccArguments, ...filePaths);
+        if (ccCompileCmd === undefined) {
+            if (this.checkedVersion < [6, 22, 0]) {
+                Editor.notificationHandler.showNotification(
+                    NotificationType.warning,
+                    'No compilation database found, CodeChecker not started - see logs for details'
+                );
+                return undefined;
+            }
+
+            if (files.length === 0) {
+                // FIXME: Add a way to analyze all open workspaces, or a selected one
+                args.push(workspace.workspaceFolders[0].uri.fsPath);
+            } else if (files.length === 1) {
+                args.push(files[0].fsPath);
+            } else {
+                Editor.notificationHandler.showNotification(
+                    NotificationType.warning,
+                    'Analyzing multiple files at once is only supported with a compilation database'
+                );
+            }
+        } else {
+            args.push(ccCompileCmd);
+
+            if (files.length) {
+                args.push('--file', ...files.map((uri) => uri.fsPath));
+            }
+        }
+
+        args.push(...ccArguments);
 
         return args;
     }
@@ -434,10 +451,10 @@ export class ExecutorBridge implements Disposable {
         }
     }
 
-    public async checkVersion(): Promise<boolean> {
+    public async checkVersion(): Promise<number[] | false> {
         return new Promise((res, _rej) => {
-            if (this.versionChecked) {
-                res(this.versionChecked);
+            if (this.checkedVersion) {
+                res(this.checkedVersion);
                 return;
             }
 
@@ -456,12 +473,12 @@ export class ExecutorBridge implements Disposable {
             if (commandArgs === undefined) {
                 this._bridgeMessages.fire('>>> Unable to determine CodeChecker version commandline\n');
 
-                this.versionChecked = false;
+                this.checkedVersion = false;
 
                 this.versionCheckInProgress = false;
-                this._versionCheckFinished.fire(this.versionChecked);
+                this._versionCheckFinished.fire(this.checkedVersion);
 
-                res(this.versionChecked);
+                res(this.checkedVersion);
                 return;
             }
 
@@ -490,7 +507,7 @@ export class ExecutorBridge implements Disposable {
                             this._bridgeMessages.fire(`>>> Unsupported CodeChecker version ${version}\n`);
                             this._bridgeMessages.fire(`>>> Minimum version: ${minimum}\n`);
 
-                            this.versionChecked = false;
+                            this.checkedVersion = false;
 
                             if (!this.shownVersionWarning) {
                                 this.shownVersionWarning = true;
@@ -542,7 +559,7 @@ export class ExecutorBridge implements Disposable {
                         } else {
                             this._bridgeMessages.fire(`>>> Supported CodeChecker version ${version}, enabled\n`);
 
-                            this.versionChecked = true;
+                            this.checkedVersion = version;
 
                             if (this.shownVersionWarning) {
                                 this.shownVersionWarning = false;
@@ -556,7 +573,7 @@ export class ExecutorBridge implements Disposable {
                         }
                     } catch (err) {
                         this._bridgeMessages.fire(`>>> Internal error while checking version: ${err}\n`);
-                        this.versionChecked = false;
+                        this.checkedVersion = false;
 
                         Editor.notificationHandler.showNotification(
                             NotificationType.error,
@@ -566,14 +583,14 @@ export class ExecutorBridge implements Disposable {
 
                     break;
                 case ProcessStatus.removed:
-                    if (this.versionChecked === undefined) {
-                        this.versionChecked = false;
+                    if (this.checkedVersion === undefined) {
+                        this.checkedVersion = false;
                     }
 
                     break;
                 default:
                     this._bridgeMessages.fire('>>> CodeChecker error while checking version\n');
-                    this.versionChecked = false;
+                    this.checkedVersion = false;
 
                     if (!this.shownVersionWarning) {
                         this.shownVersionWarning = true;
@@ -622,9 +639,9 @@ export class ExecutorBridge implements Disposable {
                 }
 
                 this.versionCheckInProgress = false;
-                this._versionCheckFinished.fire(this.versionChecked);
+                this._versionCheckFinished.fire(this.checkedVersion);
 
-                res(this.versionChecked);
+                res(this.checkedVersion);
             });
 
             ExtensionApi.executorManager.addToQueue(process, 'replace');
@@ -636,6 +653,7 @@ export class ExecutorBridge implements Disposable {
             return;
         }
 
+        // FIXME: Support multiple workspaces
         const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
 
         const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
