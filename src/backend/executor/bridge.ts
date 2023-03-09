@@ -176,13 +176,6 @@ export class ExecutorBridge implements Disposable {
 
         const ccThreads = workspace.getConfiguration('codechecker.executor').get<string>('threadCount');
         // FIXME: Add support for selecting a specific workspace folder
-        const ccCompileCmd = this.getCompileCommandsPath(
-            files.length === 0
-                ? workspace.workspaceFolders[0].uri.fsPath
-                : files.length === 1
-                    ? workspace.getWorkspaceFolder(files[0])?.uri.fsPath
-                    : undefined
-        );
 
         const args = [
             'analyze',
@@ -193,9 +186,14 @@ export class ExecutorBridge implements Disposable {
             args.push('-j', ccThreads);
         }
 
-        if (ccCompileCmd === undefined) {
-            // Multi-root support added in CodeChecker 6.22.0
-            if (this.checkedVersion < [6, 22, 0]) {
+        if (this.checkedVersion < [6, 22, 0]) {
+            const ccCompileCmd = this.getCompileCommandsPath(
+                files.length
+                    ? workspace.getWorkspaceFolder(files[0])?.uri.fsPath
+                    : workspace.workspaceFolders[0].uri.fsPath
+            );
+
+            if (ccCompileCmd === undefined) {
                 Editor.notificationHandler.showNotification(
                     NotificationType.warning,
                     'No compilation database found, CodeChecker not started - see logs for details'
@@ -203,23 +201,40 @@ export class ExecutorBridge implements Disposable {
                 return undefined;
             }
 
-            if (files.length === 0) {
+            args.push(ccCompileCmd);
+
+            if (files.length) {
+                args.push('--file', ...files.map((uri) => uri.fsPath));
+            }
+        } else {
+            // For newer versions, only prefer explicit compilation databases via settings
+            const ccCompileCmd = this.getCompileCommandsPath();
+
+            if (ccCompileCmd !== undefined) {
+                args.push(ccCompileCmd);
+
+                if (files.length) {
+                    args.push('--file', ...files.map((uri) => uri.fsPath));
+                }
+            } else if (files.length === 0) {
                 // FIXME: Add a way to analyze all open workspaces, or a selected one
                 args.push(workspace.workspaceFolders[0].uri.fsPath);
             } else if (files.length === 1) {
                 args.push(files[0].fsPath);
             } else {
-                Editor.notificationHandler.showNotification(
-                    NotificationType.warning,
-                    'No compilation database found, CodeChecker not started - ' +
-                    'Analyzing multiple files at once is only supported with a compilation database'
-                );
-                return undefined;
-            }
-        } else {
-            args.push(ccCompileCmd);
+                // Fallback to autodetection
+                const autodetectCompileCmd = this.getCompileCommandsPath(workspace.workspaceFolders[0].uri.fsPath);
 
-            if (files.length) {
+                if (autodetectCompileCmd === undefined) {
+                    Editor.notificationHandler.showNotification(
+                        NotificationType.warning,
+                        'No compilation database found, CodeChecker not started - ' +
+                        'Analyzing multiple files at once is only supported with a compilation database'
+                    );
+                    return undefined;
+                }
+
+                args.push(autodetectCompileCmd);
                 args.push('--file', ...files.map((uri) => uri.fsPath));
             }
         }
