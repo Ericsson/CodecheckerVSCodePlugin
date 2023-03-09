@@ -112,7 +112,7 @@
         },
         "codechecker.backend.compilationDatabasePath": {
           "type": "string",
-          "description": "Path to a custom compilation database, in case of a custom build system",
+          "description": "Path to a custom compilation database, in case of a custom build system. Leave blank to use the database in CodeChecker's output folder, or to use CodeChecker's autodetection for multi-root workspaces.",
           "default": null,
           "order": 3
         },
