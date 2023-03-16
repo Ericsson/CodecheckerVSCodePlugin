@@ -2,7 +2,7 @@ import { spawnSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 
-import { runTests } from 'vscode-test';
+import { runTests } from '@vscode/test-electron';
 import { STATIC_WORKSPACE_PATH } from './utils/constants';
 import { promisify } from 'util';
 

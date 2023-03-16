@@ -97,12 +97,12 @@ Since CodeChecker-related paths vary greatly between systems, the following sett
 
 ## Development
 
-This extension uses Node.js (v12+) and Yarn (v1.x).
+This extension uses Node.js (v12+) and Yarn (v2+).
 Recommended VS Code extensions are [ESLint] and [TypeScript+Webpack Problem Matcher]
 
 To build and run the extension, do the following:
 
-* `yarn install --frozen-lockfile`, to install dependencies
+* `yarn install --immutable`, to install dependencies
 * Open in Visual Studio Code (`code .`)
 * Press F5 to start debugging
   
