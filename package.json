@@ -333,7 +333,7 @@
     "test-watch": "tsc -watch -p ./",
     "pretest": "yarn run compile && yarn run test-compile && yarn run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "yarn run pretest && node ./out/test/runTest.js"
   },
   "devDependencies": {
     "@types/glob": "^7.1.3",
