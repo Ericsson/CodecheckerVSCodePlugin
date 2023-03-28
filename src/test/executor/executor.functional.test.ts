@@ -105,7 +105,7 @@ suite('Functional Test: Backend - Executor', () => {
         await assert.doesNotReject(() => statusWatch, 'CodeChecker log errored');
 
         // Wait for file watcher events to register
-        await new Promise((res) => setTimeout(res, 100));
+        await new Promise((res) => setTimeout(res, 500));
 
         assert.ok(logSpy.called, 'log command starter not called');
 
@@ -132,7 +132,7 @@ suite('Functional Test: Backend - Executor', () => {
         await assert.doesNotReject(() => statusWatch, 'CodeChecker log errored');
 
         // Wait for file watcher events to register
-        await new Promise((res) => setTimeout(res, 100));
+        await new Promise((res) => setTimeout(res, 500));
 
         assert.ok(logSpy.called, 'log command starter not called');
 
@@ -162,7 +162,7 @@ suite('Functional Test: Backend - Executor', () => {
         await assert.doesNotReject(() => statusWatch, 'CodeChecker analyze errored');
 
         // Wait for file watcher events to register
-        await new Promise((res) => setTimeout(res, 100));
+        await new Promise((res) => setTimeout(res, 500));
 
         assert.ok(analyzeSpy.called, 'analyze file starter not called');
 
@@ -188,7 +188,7 @@ suite('Functional Test: Backend - Executor', () => {
         await assert.doesNotReject(() => statusWatch, 'CodeChecker analyze errored');
 
         // Wait for file watcher events to register
-        await new Promise((res) => setTimeout(res, 100));
+        await new Promise((res) => setTimeout(res, 500));
 
         assert.ok(isFileChanged, 'CodeChecker analysis did not set metadata on project');
     }).timeout(5000);
