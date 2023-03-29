@@ -139,6 +139,11 @@ suite('Functional Test: Backend - Executor', () => {
         assert.ok(isFileChanged, 'CodeChecker log did not change compile_commands.json');
     }).timeout(5000);
 
+    test('CodeChecker log uses custom command (#122)', async function() {
+        const logCommand = executorBridge.getLogCmdArgs('cd ${workspaceFolder} && make');
+        assert.ok(logCommand?.some(arg => arg.includes('cd')), 'runLog does not use custom commands');
+    });
+
     test('CodeChecker analysis on file via command', async function() {
         // TODO: Direct commands cannot be verified via sinon spy,
         // because they are not replaced inside VSCode's callback

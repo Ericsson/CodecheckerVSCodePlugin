@@ -194,7 +194,7 @@ export class ExecutorBridge implements Disposable {
         }
 
         if (buildCommand === undefined) {
-            buildCommand = getConfigAndReplaceVariables('codechecker.backend', 'logBuildCommand') ?? 'make';
+            buildCommand = getConfigAndReplaceVariables('codechecker.executor', 'logBuildCommand') ?? 'make';
         } else {
             buildCommand = replaceVariables(buildCommand) ?? 'make';
         }
@@ -322,7 +322,7 @@ export class ExecutorBridge implements Disposable {
         if (buildCommand === undefined) {
             buildCommand = await window.showInputBox({
                 prompt: 'Enter the build command to run with CodeChecker log',
-                value: getConfigAndReplaceVariables('codechecker.backend', 'logBuildCommand') ?? 'make'
+                value: getConfigAndReplaceVariables('codechecker.executor', 'logBuildCommand') ?? 'make'
             });
         }
 
