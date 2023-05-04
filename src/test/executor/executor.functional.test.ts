@@ -64,7 +64,7 @@ suite('Functional Test: Backend - Executor', () => {
 
     test('CodeChecker version check out of the box', async function() {
         // If version is already checked, set to false to force a new check
-        executorBridge['versionChecked'] = false;
+        executorBridge['checkedVersion'] = false;
 
         const versionSpy = sinon.spy(executorBridge, 'checkVersion');
         const statusWatch = processStatusChange();
@@ -77,7 +77,7 @@ suite('Functional Test: Backend - Executor', () => {
 
         const isVersionChecked = await versionSpy.returnValues[0];
         assert.ok(
-            isVersionChecked && executorBridge['versionChecked'],
+            isVersionChecked && executorBridge['checkedVersion'],
             'does not work with clean CodeChecker out of the box'
         );
 

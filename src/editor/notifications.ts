@@ -57,7 +57,7 @@ export class NotificationHandler {
                 break;
             }
 
-            const choiceCommand = options.choices!.find((command) => command.title === choice);
+            const choiceCommand = options.choices?.find((command) => command.title === choice);
             if (choiceCommand !== undefined && choiceCommand.command !== '') {
                 await commands.executeCommand(choiceCommand.command, ...(choiceCommand.arguments ?? []));
             }
