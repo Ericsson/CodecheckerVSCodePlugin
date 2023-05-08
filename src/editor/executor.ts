@@ -11,7 +11,7 @@ import {
 } from 'vscode';
 import { Editor } from '.';
 import { ExtensionApi } from '../backend';
-import { ProcessStatus } from '../backend/executor/process';
+import { ProcessStatus, ScheduledProcess } from '../backend/executor/process';
 import { getConfigAndReplaceVariables } from '../utils/config';
 import { NotificationType } from './notifications';
 
@@ -87,7 +87,7 @@ export class ExecutorAlerts {
         }, 1000);
     }
 
-    onStatusChange(status: ProcessStatus) {
+    onStatusChange([status, _]: [ProcessStatus, ScheduledProcess]) {
         // Do not update when a non-progressbar process was finished
         if (ExtensionApi.executorManager.activeProcess === undefined) {
             return;

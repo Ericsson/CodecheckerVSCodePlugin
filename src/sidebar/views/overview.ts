@@ -80,68 +80,101 @@ export class OverviewView implements TreeDataProvider<OverviewItem> {
         ]
     };
 
-    private bottomItems = [
-        new OverviewItem(
-            'Reload CodeChecker metadata',
-            'debug-restart',
-            {
-                title: 'reloadMetadata',
-                command: 'codechecker.backend.reloadMetadata',
-            }
-        ),
-        new OverviewItem(
-            'Re-analyze current file',
-            'run',
-            {
-                title: 'reloadMetadata',
-                command: 'codechecker.executor.analyzeCurrentFile',
-            },
-        ),
-        new OverviewItem(
-            'Re-analyze entire project',
-            'run-all',
-            {
-                title: 'reloadMetadata',
-                command: 'codechecker.executor.analyzeProject',
-            }
-        ),
-        new OverviewItem(
-            'Re-run CodeChecker log',
-            'list-flat',
-            {
-                title: 'runCodeCheckerLog',
-                command: 'codechecker.executor.runCodeCheckerLog'
-            }
-        ),
-        new OverviewItem(
-            'Preview CodeChecker log in terminal',
-            'terminal',
-            {
-                title: 'previewLogInTerminal',
-                command: 'codechecker.executor.previewLogInTerminal'
-            }
-        ),
-        new OverviewItem(
-            'Stop analysis',
-            'debug-stop',
-            {
-                title: 'stopAnalysis',
-                command: 'codechecker.executor.stopAnalysis',
-            }
-        ),
-    ];
-
-    private ccNotFoundItems = [
-        new OverviewItem('——'),
-        new OverviewItem(
-            'Setup compilation database',
-            'database',
-            {
-                title: 'showSetupDialog',
-                command: 'codechecker.editor.showSetupDialog'
-            }
-        ),
-    ];
+    private bottomItems: {[id: string]: OverviewItem[]} = {
+        'normal': [
+            new OverviewItem(
+                'Reload CodeChecker metadata',
+                'debug-restart',
+                {
+                    title: 'reloadMetadata',
+                    command: 'codechecker.backend.reloadMetadata',
+                }
+            ),
+            new OverviewItem(
+                'Re-analyze current file',
+                'run',
+                {
+                    title: 'reloadMetadata',
+                    command: 'codechecker.executor.analyzeCurrentFile',
+                },
+            ),
+            new OverviewItem(
+                'Re-analyze entire project',
+                'run-all',
+                {
+                    title: 'reloadMetadata',
+                    command: 'codechecker.executor.analyzeProject',
+                }
+            ),
+            new OverviewItem(
+                'Re-run CodeChecker log',
+                'list-flat',
+                {
+                    title: 'runCodeCheckerLog',
+                    command: 'codechecker.executor.runCodeCheckerLog'
+                }
+            ),
+            new OverviewItem(
+                'Preview CodeChecker log in terminal',
+                'terminal',
+                {
+                    title: 'previewLogInTerminal',
+                    command: 'codechecker.executor.previewLogInTerminal'
+                }
+            ),
+            new OverviewItem(
+                'Stop running CodeChecker instance',
+                'debug-stop',
+                {
+                    title: 'stopCodeChecker',
+                    command: 'codechecker.executor.stopCodeChecker',
+                }
+            ),
+            new OverviewItem(
+                'Clear analysis queue',
+                'clear-all',
+                {
+                    title: 'clearQueue',
+                    command: 'codechecker.executor.clearQueue',
+                }
+            ),
+        ],
+        'ccNotFound': [
+            new OverviewItem(
+                'Setup compilation database',
+                'database',
+                {
+                    title: 'showSetupDialog',
+                    command: 'codechecker.editor.showSetupDialog'
+                }
+            ),
+            new OverviewItem('——'),
+            new OverviewItem(
+                'Reload CodeChecker metadata',
+                'debug-restart',
+                {
+                    title: 'reloadMetadata',
+                    command: 'codechecker.backend.reloadMetadata',
+                }
+            ),
+            new OverviewItem(
+                'Run CodeChecker log',
+                'list-flat',
+                {
+                    title: 'runCodeCheckerLog',
+                    command: 'codechecker.executor.runCodeCheckerLog'
+                }
+            ),
+            new OverviewItem(
+                'Preview CodeChecker log in terminal',
+                'terminal',
+                {
+                    title: 'previewLogInTerminal',
+                    command: 'codechecker.executor.previewLogInTerminal'
+                }
+            ),
+        ]
+    };
 
     private separator = [new OverviewItem('——')];
 
@@ -175,11 +208,11 @@ export class OverviewView implements TreeDataProvider<OverviewItem> {
             ? this.topItems.normal
             : this.topItems.notFound;
 
-        const ccNotFoundItems = ExtensionApi.executorBridge.getCompileCommandsPath() === undefined
-            ? this.ccNotFoundItems
-            : [];
+        const bottomItems = ExtensionApi.executorBridge.getCompileCommandsPath() !== undefined
+            ? this.bottomItems.normal
+            : this.bottomItems.ccNotFound;
 
-        this.itemsList = [topItems, this.separator, this.bottomItems, ccNotFoundItems];
+        this.itemsList = [topItems, this.separator, bottomItems];
 
         this._onDidChangeTreeData.fire();
     }

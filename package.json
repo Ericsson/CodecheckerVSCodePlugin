@@ -91,6 +91,10 @@
         "title": "CodeChecker: Stop running CodeChecker instance"
       },
       {
+        "command": "codechecker.executor.clearQueue",
+        "title": "CodeChecker: Stop analysis and clear analysis queue"
+      },
+      {
         "command": "codechecker.sidebar.clearNotifications",
         "title": "CodeChecker: Clear notifications list"
       }

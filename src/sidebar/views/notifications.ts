@@ -46,9 +46,12 @@ export class NotificationItem {
             this.label,
             this.children.length > 0 ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None
         );
-        node.command = this.command;
+
+        if (this.command?.command) {
+            node.command = this.command;
+        }
         node.iconPath = this.iconPath ? new ThemeIcon(this.iconPath) : undefined;
-        node.description = this.command?.tooltip;
+        node.tooltip = this.command?.tooltip;
 
         return node;
     }
@@ -83,7 +86,9 @@ export class NotificationItem {
                 this._children = (choices as Command[]).map(choice => new NotificationItem(this.view, '', choice));
             }
 
-            this.command = undefined;
+            if (this.command) {
+                this.command.command = '';
+            }
         }
     }
 }

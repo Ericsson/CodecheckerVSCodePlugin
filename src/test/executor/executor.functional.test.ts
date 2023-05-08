@@ -16,7 +16,7 @@ suite('Functional Test: Backend - Executor', () => {
     const filePath = path.join(STATIC_WORKSPACE_PATH, 'file.cpp');
 
     const processStatusChange = async () => new Promise<void>((res, rej) => {
-        const disposable = executorManager.processStatusChange((status) => {
+        const disposable = executorManager.processStatusChange(([status, _]) => {
             switch (status) {
             case ProcessStatus.finished:
                 disposable.dispose();
@@ -224,7 +224,7 @@ suite('Functional Test: Backend - Executor', () => {
         assert(executorManager['queue'].get(ProcessType.analyze)!.length > 0, 'Multiple entries not added to queue');
         assert(executorManager.activeProcess !== undefined, 'Process not started automatically');
 
-        executorBridge.stopAnalysis();
+        executorBridge.stopAndClearQueue();
 
         const processType = executorManager.activeProcess?.processParameters.processType;
 
@@ -250,6 +250,6 @@ suite('Functional Test: Backend - Executor', () => {
         // It's possible for that element to start executing before this assertion.
         assert(executorManager['queue'].get(ProcessType.analyze)!.length <= 1, 'Task queue is not deduplicated');
 
-        executorBridge.stopAnalysis();
+        executorBridge.stopAndClearQueue();
     });
 });
