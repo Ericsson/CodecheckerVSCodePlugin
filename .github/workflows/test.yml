@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Get the version
         id: get_version
-        run: echo ::set-output name=version::0.0.0-$(echo ${GITHUB_SHA} | head -c 7)
+        run: echo version=0.0.0-$(echo ${GITHUB_SHA} | head -c 7) >>$GITHUB_OUTPUT
 
   package:
     needs: [version]
