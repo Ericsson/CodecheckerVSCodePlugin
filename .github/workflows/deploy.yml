@@ -6,12 +6,26 @@ on:
     types: [published]
 
 jobs:
+  version:
+    name: Version dummy
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=version::${GITHUB_REF#refs/tags/}
+
   test:
     uses: ./.github/workflows/test.yml
+  package:
+    needs: [version]
+    uses: ./.github/workflows/package.yml
+    with:
+      version: ${{ needs.version.output.version }}
+
   build:
     name: Create extension
     runs-on: ubuntu-22.04
-    needs: [test]
+    needs: [test, package, version]
 
     # Each registry should have the following fields:
     #   - name: unique extension id.
@@ -31,38 +45,10 @@ jobs:
             token: VS_MARKETPLACE_TOKEN
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Install Node.js
-        uses: actions/setup-node@v1
-        with:
-          node-version: 16.x
-
-      - name: Enable Yarn 2
-        run: yarn set version stable
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Get the version
-        id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
-
-      - name: Create vsix package
-        if: success()
-        id: build
-        run: |
-          sed -i 's/"name": "codechecker"/"name": "${{ matrix.name }}"/' package.json
-          yarn run vsce package --no-git-tag-version --yarn ${{ steps.get_version.outputs.VERSION }}
-          echo ::set-output name=vsixPath::$(readlink -f *.vsix)
-
-      - name: Create vsix artifact
-        if: success()
-        uses: actions/upload-artifact@master
+      - name: Get vsix artifact
+        uses: actions/download-artifact@v3
         with:
           name: ${{ matrix.registry }}-package
-          path: ${{ steps.build.outputs.vsixPath }}
 
       - name: Publish package
         if: success()
@@ -70,4 +56,4 @@ jobs:
         with:
           pat: ${{ secrets[matrix.token] }}
           registryUrl: ${{ matrix.registryUrl }}
-          extensionFile: ${{ steps.build.outputs.vsixPath }}
+          extensionFile: ./${{ matrix.name }}-${{ needs.version.output.version }}.vsix
