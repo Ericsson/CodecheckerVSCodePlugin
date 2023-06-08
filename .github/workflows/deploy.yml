@@ -7,7 +7,7 @@ on:
 
 jobs:
   version:
-    name: Version dummy
+    name: Get version number
     runs-on: ubuntu-22.04
     steps:
       - name: Get the version

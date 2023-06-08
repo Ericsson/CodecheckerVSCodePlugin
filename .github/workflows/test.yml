@@ -1,27 +1,11 @@
-name: codechecker-vscodeplugin-tests
+name: Run plugin tests
 
-# Triggers the workflow on push or pull request events.
-on: [push, pull_request, workflow_call]
+on: [workflow_call]
 
 jobs:
-  version:
-    name: Version dummy
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Get the version
-        id: get_version
-        run: echo version=0.0.0-$(echo ${GITHUB_SHA} | head -c 7) >>$GITHUB_OUTPUT
-
-  package:
-    needs: [version]
-    uses: ./.github/workflows/package.yml
-    with:
-      version: ${{ needs.version.outputs.version }}
-
   test:
     name: Tests
     runs-on: ubuntu-22.04
-    needs: [package]
 
     steps:
       - uses: actions/checkout@v3
