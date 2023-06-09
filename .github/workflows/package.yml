@@ -1,0 +1,48 @@
+name: Package CodeChecker VSCode extension
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  package:
+    name: Create extension package
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        registry: [open-vsx, vs-marketplace]
+        include:
+          - registry: open-vsx
+            name: codechecker
+          - registry: vs-marketplace
+            name: vscode-codechecker
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Enable Yarn 2
+        run: yarn set version stable
+
+      - name: Install dependencies
+        run: yarn install --immutable
+        
+      # Should be kept in sync with `deploy.yml`.
+      - name: Create vsix package
+        if: success()
+        id: build
+        run: |
+          sed -i 's/"name": "codechecker"/"name": "${{ matrix.name }}"/' package.json
+          sed -i 's/codechecker@workspace/${{ matrix.name }}@workspace/' yarn.lock
+          yarn run vsce package --no-git-tag-version --yarn ${{ inputs.version }}
+          echo vsixPath=$(readlink -f *.vsix) >>$GITHUB_OUTPUT
+
+      - name: Create vsix artifact
+        if: success()
+        uses: actions/upload-artifact@master
+        with:
+          name: ${{ matrix.registry }}-package
+          path: ${{ steps.build.outputs.vsixPath }}

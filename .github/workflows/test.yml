@@ -1,24 +1,28 @@
-name: codechecker-vscodeplugin-tests
+name: Run plugin tests
 
-# Triggers the workflow on push or pull request events.
-on: [push, pull_request, workflow_call]
+on: [workflow_call]
 
 jobs:
   test:
     name: Tests
     runs-on: ubuntu-22.04
+
     steps:
       - uses: actions/checkout@v3
+
       - name: Enable Yarn 2
         run: yarn set version stable
+
       - name: Install dependencies
         run: yarn install --immutable
+
       - name: Install CodeChecker
         run: |
           sudo apt install -y clang-tidy
           sudo snap install codechecker --classic
           sudo snap alias codechecker CodeChecker
           CodeChecker version
+
       - name: Run tests
         uses: GabrielBB/xvfb-action@v1.6
         with:
