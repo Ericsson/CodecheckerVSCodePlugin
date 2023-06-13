@@ -13,6 +13,8 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo version=${GITHUB_REF#refs/tags/} >>$GITHUB_OUTPUT
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
 
   test:
     uses: ./.github/workflows/test.yml
@@ -20,7 +22,7 @@ jobs:
     needs: [version]
     uses: ./.github/workflows/package.yml
     with:
-      version: ${{ needs.version.output.version }}
+      version: ${{ needs.version.outputs.version }}
 
   build:
     name: Create extension
@@ -56,4 +58,4 @@ jobs:
         with:
           pat: ${{ secrets[matrix.token] }}
           registryUrl: ${{ matrix.registryUrl }}
-          extensionFile: ./${{ matrix.name }}-${{ needs.version.output.version }}.vsix
+          extensionFile: ./${{ matrix.name }}-${{ needs.version.outputs.version }}.vsix

@@ -11,6 +11,8 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo version=0.0.0-$(echo ${GITHUB_SHA} | head -c 7) >>$GITHUB_OUTPUT
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
 
   package:
     needs: [version]
