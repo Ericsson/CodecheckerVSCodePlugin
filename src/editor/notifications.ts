@@ -45,7 +45,10 @@ export class NotificationHandler {
         };
 
         if (options.showOnSidebar) {
-            SidebarContainer.notificationView.addNotification(type, options.sidebarMessage ?? message, options.choices);
+            // When the constructor calls this function, the sidebar is not yet initialized
+            SidebarContainer.notificationView?.addNotification(
+                type, options.sidebarMessage ?? message, options.choices
+            );
         }
 
         if (options.showOnTray === 'always' || (options.showOnTray && this.showTrayNotifications)) {
