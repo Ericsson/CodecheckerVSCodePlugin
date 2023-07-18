@@ -233,8 +233,10 @@ export class ExecutorBridge implements Disposable {
                 }
             } else if (files.length === 0) {
                 // FIXME: Add a way to analyze all open workspaces, or a selected one
+                this._bridgeMessages.fire('>>> Using CodeChecker\'s built-in compilation database resolver\n');
                 args.push(workspace.workspaceFolders[0].uri.fsPath);
             } else if (files.length === 1) {
+                this._bridgeMessages.fire('>>> Using CodeChecker\'s built-in compilation database resolver\n');
                 args.push(files[0].fsPath);
             } else {
                 // Fallback to autodetection
@@ -286,6 +288,7 @@ export class ExecutorBridge implements Disposable {
         const logArguments = parseShellArgsAndReplaceVariables(logArgumentsSetting ?? '');
 
         // Use a predefined path as fallback here
+        // TODO: Add handling for multi-root workspaces here by resolving the build command's target
         const ccCompileCmd = this.getCompileCommandsPath() ?? path.join(ccFolder, 'compile_commands.json');
 
         return [
@@ -324,10 +327,9 @@ export class ExecutorBridge implements Disposable {
 
     private analyzeOnSave() {
         const canAnalyzeOnSave = workspace.getConfiguration('codechecker.executor').get<boolean>('runOnSave');
-        // Fail silently if there's no compile_commands.json
-        const ccExists = this.getCompileCommandsPath() !== undefined;
 
-        if (!canAnalyzeOnSave || !ccExists) {
+        // Analyze even if the comp.db doesn't exists, for multi-root workspaces
+        if (!canAnalyzeOnSave) {
             return;
         }
 
@@ -372,6 +374,7 @@ export class ExecutorBridge implements Disposable {
             return;
         }
 
+        // FIXME: Add handling for missing comp.db. output messages of CodeChecker
         const process = new ScheduledProcess(ccPath, commandArgs, { processType: ProcessType.analyze });
 
         ExtensionApi.executorManager.addToQueue(process, 'prepend');

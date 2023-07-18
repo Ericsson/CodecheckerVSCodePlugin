@@ -16,6 +16,7 @@ export class FolderInitializer {
 
     async showDialogIfAvailable() {
         if (
+            // TODO: Don't show setup dialog for multi-root workspaces
             ExtensionApi.executorBridge.getCompileCommandsPath() === undefined &&
             workspace.getConfiguration('codechecker.editor').get('showDatabaseDialog') !== false
         ) {

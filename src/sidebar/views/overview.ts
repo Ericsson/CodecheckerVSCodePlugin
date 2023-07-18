@@ -80,32 +80,51 @@ export class OverviewView implements TreeDataProvider<OverviewItem> {
         ]
     };
 
+    private middleItems = [
+        new OverviewItem(
+            'Reload CodeChecker metadata',
+            'debug-restart',
+            {
+                title: 'reloadMetadata',
+                command: 'codechecker.backend.reloadMetadata',
+            }
+        ),
+        new OverviewItem(
+            'Re-analyze current file',
+            'run',
+            {
+                title: 'reloadMetadata',
+                command: 'codechecker.executor.analyzeCurrentFile',
+            },
+        ),
+        new OverviewItem(
+            'Re-analyze entire project',
+            'run-all',
+            {
+                title: 'reloadMetadata',
+                command: 'codechecker.executor.analyzeProject',
+            }
+        ),
+        new OverviewItem(
+            'Stop running CodeChecker instance',
+            'debug-stop',
+            {
+                title: 'stopCodeChecker',
+                command: 'codechecker.executor.stopCodeChecker',
+            }
+        ),
+        new OverviewItem(
+            'Clear analysis queue',
+            'clear-all',
+            {
+                title: 'clearQueue',
+                command: 'codechecker.executor.clearQueue',
+            }
+        ),
+    ];
+
     private bottomItems: {[id: string]: OverviewItem[]} = {
         'normal': [
-            new OverviewItem(
-                'Reload CodeChecker metadata',
-                'debug-restart',
-                {
-                    title: 'reloadMetadata',
-                    command: 'codechecker.backend.reloadMetadata',
-                }
-            ),
-            new OverviewItem(
-                'Re-analyze current file',
-                'run',
-                {
-                    title: 'reloadMetadata',
-                    command: 'codechecker.executor.analyzeCurrentFile',
-                },
-            ),
-            new OverviewItem(
-                'Re-analyze entire project',
-                'run-all',
-                {
-                    title: 'reloadMetadata',
-                    command: 'codechecker.executor.analyzeProject',
-                }
-            ),
             new OverviewItem(
                 'Re-run CodeChecker log',
                 'list-flat',
@@ -122,22 +141,6 @@ export class OverviewView implements TreeDataProvider<OverviewItem> {
                     command: 'codechecker.executor.previewLogInTerminal'
                 }
             ),
-            new OverviewItem(
-                'Stop running CodeChecker instance',
-                'debug-stop',
-                {
-                    title: 'stopCodeChecker',
-                    command: 'codechecker.executor.stopCodeChecker',
-                }
-            ),
-            new OverviewItem(
-                'Clear analysis queue',
-                'clear-all',
-                {
-                    title: 'clearQueue',
-                    command: 'codechecker.executor.clearQueue',
-                }
-            ),
         ],
         'ccNotFound': [
             new OverviewItem(
@@ -146,15 +149,6 @@ export class OverviewView implements TreeDataProvider<OverviewItem> {
                 {
                     title: 'showSetupDialog',
                     command: 'codechecker.editor.showSetupDialog'
-                }
-            ),
-            new OverviewItem('——'),
-            new OverviewItem(
-                'Reload CodeChecker metadata',
-                'debug-restart',
-                {
-                    title: 'reloadMetadata',
-                    command: 'codechecker.backend.reloadMetadata',
                 }
             ),
             new OverviewItem(
@@ -212,7 +206,7 @@ export class OverviewView implements TreeDataProvider<OverviewItem> {
             ? this.bottomItems.normal
             : this.bottomItems.ccNotFound;
 
-        this.itemsList = [topItems, this.separator, bottomItems];
+        this.itemsList = [topItems, this.separator, this.middleItems, this.separator, bottomItems];
 
         this._onDidChangeTreeData.fire();
     }
