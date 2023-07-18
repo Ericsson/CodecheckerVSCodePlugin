@@ -14,7 +14,7 @@
     "url": "https://github.com/Ericsson/CodeCheckerVSCodePlugin/issues"
   },
   "license": "Apache-2.0",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "engines": {
     "vscode": "^1.53.0"
   },
