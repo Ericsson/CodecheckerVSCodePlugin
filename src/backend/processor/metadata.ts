@@ -128,7 +128,8 @@ export class MetadataApi implements Disposable {
         let precheckFailed = false;
 
         if (!this.metadataPath) {
-            Editor.notificationHandler.showNotification(
+            // When the constructor calls this function, the notification handler is not yet initialized
+            Editor.notificationHandler?.showNotification(
                 NotificationType.warning,
                 'Metadata folder has invalid path\n' +
                 'Please change `CodeChecker > Backend > Output folder path` in the settings'
@@ -138,7 +139,7 @@ export class MetadataApi implements Disposable {
         }
 
         if (!workspace.workspaceFolders?.length) {
-            Editor.notificationHandler.showNotification(
+            Editor.notificationHandler?.showNotification(
                 NotificationType.information,
                 'CodeChecker is disabled - open a workspace to get started',
                 { showOnTray: false }
