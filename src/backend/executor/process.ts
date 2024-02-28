@@ -1,4 +1,4 @@
-import * as child_process from 'child_process';
+import * as childProcess from 'child_process';
 import * as os from 'os';
 import { quote } from 'shell-quote';
 import { Disposable, Event, EventEmitter, ExtensionContext, workspace } from 'vscode';
@@ -56,7 +56,7 @@ export class ScheduledProcess implements Disposable {
     public readonly executable: string;
     public readonly commandArgs: string[];
 
-    private activeProcess?: child_process.ChildProcess;
+    private activeProcess?: childProcess.ChildProcess;
 
     /** Contains parameters for the executor. All members are defined. */
     public readonly processParameters: ProcessParameters;
@@ -135,7 +135,7 @@ export class ScheduledProcess implements Disposable {
 
         this._processStderr.fire(`>>> Starting process '${commonName}'\n`);
         this._processStderr.fire(`> ${this.commandLine}\n`);
-        this.activeProcess = child_process.spawn(
+        this.activeProcess = childProcess.spawn(
             this.executable,
             this.commandArgs,
             { cwd: workspace.workspaceFolders[0].uri.fsPath }
