@@ -36,7 +36,7 @@ export class ExecutorAlerts {
 
     init() {
         this.statusBarItem.text = 'CodeChecker: not running';
-        this.statusBarItem.command = { title: '', command: 'codechecker.logging.showOutput' };
+        this.statusBarItem.command = { title: '', command: 'codechecker.executor.showOutput' };
         this.statusBarItem.show();
     }
 
