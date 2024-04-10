@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
 
-import { parseMetadata } from '../../backend/parser';
+import { MetadataParseError, parseMetadata } from '../../backend/parser';
 import { STATIC_FILE_PATH } from '../utils/constants';
 
 suite('Unit Test: Metadata Parser', () => {
@@ -42,7 +42,7 @@ suite('Unit Test: Metadata Parser', () => {
         const testAndExpectCode = async (filename: string, code: string) => {
             await assert.rejects(
                 () => parseMetadata(path.join(staticPath, filename)),
-                (err) => {
+                (err: MetadataParseError) => {
                     assert.strictEqual(err.code, code, 'wrong error code');
                     return true;
                 },
@@ -52,7 +52,7 @@ suite('Unit Test: Metadata Parser', () => {
         const testAndExpectSyntaxError = async (filename: string) => {
             await assert.rejects(
                 () => parseMetadata(path.join(staticPath, filename)),
-                (err) => {
+                (err: MetadataParseError) => {
                     assert.ok(err instanceof SyntaxError, 'wrong error type');
                     return true;
                 },
