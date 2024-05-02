@@ -112,9 +112,11 @@ export class ExecutorAlerts {
         case ProcessStatusType.errored:
             this.statusBarItem.text = '$(testing-error-icon) CodeChecker: analysis errored';
 
+            const logLocation = status.reason ? 'sidebar' : 'output log';
+
             Editor.notificationHandler.showNotification(
                 NotificationType.error,
-                'CodeChecker finished with error - see logs for details'
+                `CodeChecker finished with error - see the ${logLocation} for details`
             );
             break;
         default:
