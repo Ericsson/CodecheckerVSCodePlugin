@@ -3,16 +3,22 @@ import * as os from 'os';
 import { quote } from 'shell-quote';
 import { Disposable, Event, EventEmitter, ExtensionContext, workspace } from 'vscode';
 
-export enum ProcessStatus {
+export enum ProcessStatusType {
     notRunning,
     running,
     // When added to the execution queue
     queued,
     killed,
     finished,
+    warning,
     errored,
     // When overwritten in the queue with 'replace', or cleared
     removed,
+}
+
+export interface ProcessStatus {
+    type: ProcessStatusType,
+    reason?: string
 }
 
 export enum ProcessType {
@@ -57,6 +63,7 @@ export class ScheduledProcess implements Disposable {
     public readonly commandArgs: string[];
 
     private activeProcess?: childProcess.ChildProcess;
+    private lastLogMessage?: string;
 
     /** Contains parameters for the executor. All members are defined. */
     public readonly processParameters: ProcessParameters;
@@ -85,8 +92,8 @@ export class ScheduledProcess implements Disposable {
         return this._processStderr.event;
     }
 
-    private _processStatus: ProcessStatus = ProcessStatus.notRunning;
-    public get processStatus(): ProcessStatus {
+    private _processStatus: ProcessStatusType = ProcessStatusType.notRunning;
+    public get processStatus(): ProcessStatusType {
         return this._processStatus;
     }
 
@@ -106,6 +113,18 @@ export class ScheduledProcess implements Disposable {
         if (this.processParameters.forwardStdoutToLogs === undefined) {
             this.processParameters.forwardStdoutToLogs = !forwardDefaults.includes(processType);
         }
+
+        const parseLogMessage = (line: string) => {
+            // Do not store json output as last error
+            if (line.startsWith('{') || line === '') {
+                return;
+            }
+
+            this.lastLogMessage = line;
+        };
+
+        this.processStdout(parseLogMessage, this);
+        this.processStderr(parseLogMessage, this);
     }
 
     dispose() {
@@ -113,7 +132,7 @@ export class ScheduledProcess implements Disposable {
             this.killProcess();
         }
 
-        this._processStatusChange.fire(ProcessStatus.removed);
+        this._processStatusChange.fire({ type: ProcessStatusType.removed });
 
         this._processStatusChange.dispose();
         this._processStdout.dispose();
@@ -153,7 +172,7 @@ export class ScheduledProcess implements Disposable {
 
         this.activeProcess.on('error', (err) => {
             this._processStderr.fire(`>>> Process '${commonName}' errored: ${err.message}\n`);
-            this.updateStatus(ProcessStatus.errored);
+            this.updateStatus(ProcessStatusType.errored);
         });
         // Guaranteed to fire after all datastreams are closed
         this.activeProcess.on('close', (code: number | null) => {
@@ -163,15 +182,15 @@ export class ScheduledProcess implements Disposable {
             case null:
             case 0:
             case 2:
-                this.updateStatus(ProcessStatus.finished);
+                this.updateStatus(ProcessStatusType.finished);
                 break;
             default:
-                this.updateStatus(ProcessStatus.errored);
+                this.updateStatus(ProcessStatusType.errored);
                 break;
             }
         });
 
-        this.updateStatus(ProcessStatus.running);
+        this.updateStatus(ProcessStatusType.running);
     }
 
     public killProcess() {
@@ -182,28 +201,54 @@ export class ScheduledProcess implements Disposable {
         this.activeProcess.kill('SIGINT');
         this._processStderr.fire('>>> Process killed\n');
 
-        this.updateStatus(ProcessStatus.killed);
+        this.updateStatus(ProcessStatusType.killed);
     }
 
-    private updateStatus(status: ProcessStatus) {
-        switch (status) {
-        case ProcessStatus.running:
-            if (this._processStatus !== ProcessStatus.running) {
-                this._processStatus = ProcessStatus.running;
-                this._processStatusChange.fire(ProcessStatus.running);
+    private updateStatus(type: ProcessStatusType) {
+        switch (type) {
+        case ProcessStatusType.running:
+            if (this._processStatus !== ProcessStatusType.running) {
+                this._processStatus = ProcessStatusType.running;
+                this._processStatusChange.fire({ type: ProcessStatusType.running });
             }
-            break;
-        case ProcessStatus.removed:
+            return;
+        case ProcessStatusType.removed:
             // dispose() calls killProcess before dispatching this event.
-            this._processStatusChange.fire(ProcessStatus.removed);
-            break;
-        default:
-            if (this._processStatus === ProcessStatus.running) {
-                this.activeProcess = undefined;
-                this._processStatus = ProcessStatus.notRunning;
-                this._processStatusChange.fire(status);
+            this._processStatusChange.fire({ type: ProcessStatusType.removed });
+            return;
+        }
+
+        if (this._processStatus === ProcessStatusType.running) {
+            this.activeProcess = undefined;
+            this._processStatus = ProcessStatusType.notRunning;
+
+            const lastLogMessage = this.lastLogMessage?.replace(/^\[.+\]/, '');
+            const lastLogSeverity = this.lastLogMessage?.match(/^\[(\w+)/)?.[1];
+
+            if (type === ProcessStatusType.errored) {
+                this._processStatusChange.fire({ type, reason: lastLogMessage });
+                return;
+            } else if (type !== ProcessStatusType.finished) {
+                this._processStatusChange.fire({ type });
+                return;
             }
-            break;
+
+            // Refine the finished process status based on the last log message
+            switch (lastLogSeverity) {
+            case 'CRITICAL':
+            case 'ERROR':
+                this._processStatusChange.fire({ type: ProcessStatusType.errored, reason: lastLogMessage });
+                break;
+            case 'WARNING':
+                this._processStatusChange.fire({ type: ProcessStatusType.warning, reason: lastLogMessage });
+                break;
+            case 'DEBUG':
+                this._processStatusChange.fire({ type: ProcessStatusType.finished });
+                break;
+            default:
+                this._processStatusChange.fire({ type: ProcessStatusType.finished, reason: lastLogMessage });
+                break;
+            }
         }
     }
 }
@@ -253,8 +298,8 @@ export class ExecutorManager implements Disposable {
         return this._processStderr.event;
     }
 
-    private _processStatus: ProcessStatus = ProcessStatus.notRunning;
-    public get processStatus(): ProcessStatus {
+    private _processStatus: ProcessStatusType = ProcessStatusType.notRunning;
+    public get processStatus(): ProcessStatusType {
         return this._processStatus;
     }
 
@@ -273,12 +318,12 @@ export class ExecutorManager implements Disposable {
     }
 
     private updateStatus([status, process]: [ProcessStatus, ScheduledProcess]) {
-        switch (status) {
-        case ProcessStatus.removed:
+        switch (status.type) {
+        case ProcessStatusType.removed:
             this._processStatusChange.fire([status, process]);
             break;
-        case ProcessStatus.running:
-        case ProcessStatus.queued:
+        case ProcessStatusType.running:
+        case ProcessStatusType.queued:
             this._processStatusChange.fire([status, process]);
             break;
         default:
@@ -330,7 +375,7 @@ export class ExecutorManager implements Disposable {
         switch (method) {
         case 'replace':
             for (const entry of namedQueue) {
-                this.updateStatus([ProcessStatus.removed, entry]);
+                this.updateStatus([{ type: ProcessStatusType.removed }, entry]);
                 entry.dispose();
             }
 
@@ -345,7 +390,7 @@ export class ExecutorManager implements Disposable {
             break;
         }
 
-        this.updateStatus([ProcessStatus.queued, process]);
+        this.updateStatus([{ type: ProcessStatusType.queued }, process]);
         this.queue.set(name, namedQueue);
 
         this.startNextProcess();
@@ -359,7 +404,7 @@ export class ExecutorManager implements Disposable {
         if (namedQueue.some((queueItem) => queueItem.commandLine === process.commandLine)) {
             if (!silent) {
                 for (const entry of namedQueue.filter((queueItem) => queueItem.commandLine === process.commandLine)) {
-                    this.updateStatus([ProcessStatus.removed, entry]);
+                    this.updateStatus([{ type: ProcessStatusType.removed }, entry]);
                     entry.dispose();
                 }
             }
@@ -375,7 +420,7 @@ export class ExecutorManager implements Disposable {
     public clearQueue(name?: string) {
         if (name) {
             for (const entry of this.queue.get(name) ?? []) {
-                this.updateStatus([ProcessStatus.removed, entry]);
+                this.updateStatus([{ type: ProcessStatusType.removed }, entry]);
                 entry.dispose();
             }
 
@@ -383,7 +428,7 @@ export class ExecutorManager implements Disposable {
         } else {
             for (const [, queue] of this.queue.entries()) {
                 for (const entry of queue) {
-                    this.updateStatus([ProcessStatus.removed, entry]);
+                    this.updateStatus([{ type: ProcessStatusType.removed }, entry]);
                     entry.dispose();
                 }
             }

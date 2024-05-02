@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as path from 'path';
 const sinon = require('sinon');
 import { ConfigurationTarget, Uri, commands, extensions, workspace } from 'vscode';
-import { ExecutorBridge, ExecutorManager, ProcessStatus, ProcessType } from '../../backend/executor';
+import { ExecutorBridge, ExecutorManager, ProcessStatusType, ProcessType } from '../../backend/executor';
 import { CodeCheckerExtension } from '../../extension';
 import { STATIC_WORKSPACE_PATH } from '../utils/constants';
 import { closeAllTabs, openDocument } from '../utils/files';
@@ -17,13 +17,14 @@ suite('Functional Test: Backend - Executor', () => {
 
     const processStatusChange = async () => new Promise<void>((res, rej) => {
         const disposable = executorManager.processStatusChange(([status, _]) => {
-            switch (status) {
-            case ProcessStatus.finished:
+            switch (status.type) {
+            case ProcessStatusType.finished:
+            case ProcessStatusType.warning:
                 disposable.dispose();
                 res();
                 return;
-            case ProcessStatus.errored:
-            case ProcessStatus.killed:
+            case ProcessStatusType.errored:
+            case ProcessStatusType.killed:
                 disposable.dispose();
                 rej('process not exited cleanly');
                 return;

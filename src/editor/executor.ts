@@ -11,7 +11,7 @@ import {
 } from 'vscode';
 import { Editor } from '.';
 import { ExtensionApi } from '../backend';
-import { ProcessStatus, ScheduledProcess } from '../backend/executor/process';
+import { ProcessStatus, ProcessStatusType, ScheduledProcess } from '../backend/executor/process';
 import { getConfigAndReplaceVariables } from '../utils/config';
 import { NotificationType } from './notifications';
 
@@ -93,23 +93,23 @@ export class ExecutorAlerts {
             return;
         }
 
-        if (status === ProcessStatus.running) {
+        if (status.type === ProcessStatusType.running) {
             this.statusBarItem.text = '$(loading) CodeChecker: analysis in progress...';
             this.statusBarItem.show();
             return;
         }
 
-        switch (status) {
-        case ProcessStatus.finished:
+        switch (status.type) {
+        case ProcessStatusType.finished:
             this.statusBarItem.text = '$(testing-passed-icon) CodeChecker: analysis finished';
             break;
-        case ProcessStatus.killed:
+        case ProcessStatusType.killed:
             this.statusBarItem.text = '$(testing-failed-icon) CodeChecker: analysis killed';
             break;
-        case ProcessStatus.notRunning:
+        case ProcessStatusType.notRunning:
             this.statusBarItem.text = '$(info) CodeChecker: ready';
             break;
-        case ProcessStatus.errored:
+        case ProcessStatusType.errored:
             this.statusBarItem.text = '$(testing-error-icon) CodeChecker: analysis errored';
 
             Editor.notificationHandler.showNotification(
