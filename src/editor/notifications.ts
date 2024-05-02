@@ -1,6 +1,6 @@
 import { Command, ConfigurationChangeEvent, ExtensionContext, commands, window, workspace } from 'vscode';
 import { ExtensionApi } from '../backend';
-import { ProcessStatus, ProcessType, ScheduledProcess } from '../backend/executor';
+import { ProcessStatus, ProcessStatusType, ProcessType, ScheduledProcess } from '../backend/executor';
 import { SidebarContainer } from '../sidebar';
 import { NotificationItem } from '../sidebar/views';
 
@@ -87,7 +87,7 @@ export class NotificationHandler {
         }
 
         const notification = this.activeNotifications.get(process.commandLine);
-        if (notification === undefined && status !== ProcessStatus.queued) {
+        if (notification === undefined && status.type !== ProcessStatusType.queued) {
             return;
         }
 
@@ -99,8 +99,8 @@ export class NotificationHandler {
             };
         };
 
-        switch (status) {
-        case ProcessStatus.queued: {
+        switch (status.type) {
+        case ProcessStatusType.queued: {
             const newNotification = SidebarContainer.notificationView.addNotification(
                 'browser', makeMessage('added to the process queue'), [
                     {
@@ -118,7 +118,7 @@ export class NotificationHandler {
 
             break;
         }
-        case ProcessStatus.running: {
+        case ProcessStatusType.running: {
             notification!.silentUpdate({ choices: [] });
 
             const newNotification = SidebarContainer.notificationView.addNotification(
@@ -136,7 +136,7 @@ export class NotificationHandler {
 
             break;
         }
-        case ProcessStatus.killed: {
+        case ProcessStatusType.killed: {
             notification!.update({
                 message: makeMessage('was killed'),
                 choices: []
@@ -145,7 +145,7 @@ export class NotificationHandler {
 
             break;
         }
-        case ProcessStatus.finished: {
+        case ProcessStatusType.finished: {
             notification!.update({
                 message: makeMessage('finished running'),
                 choices: []
@@ -154,7 +154,7 @@ export class NotificationHandler {
 
             break;
         }
-        case ProcessStatus.errored: {
+        case ProcessStatusType.errored: {
             notification!.update({
                 message: makeMessage('finished with errors'),
                 choices: [{
@@ -166,7 +166,7 @@ export class NotificationHandler {
 
             break;
         }
-        case ProcessStatus.removed: {
+        case ProcessStatusType.removed: {
             notification!.update({
                 message: makeMessage('removed from the process queue'),
                 type: 'browser',
