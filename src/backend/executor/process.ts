@@ -114,13 +114,14 @@ export class ScheduledProcess implements Disposable {
             this.processParameters.forwardStdoutToLogs = !forwardDefaults.includes(processType);
         }
 
-        const parseLogMessage = (line: string) => {
-            // Do not store json output as last error
-            if (line.startsWith('{') || line === '') {
-                return;
-            }
+        const parseLogMessage = (stdout: string) => {
+            // Do not store json output or meta messages as last error
+            const lines = stdout.split('\n')
+                .filter((line) => !line.startsWith('{') && !line.startsWith('>') && line !== '');
 
-            this.lastLogMessage = line;
+            if (lines.length > 0) {
+                this.lastLogMessage = lines[lines.length - 1];
+            }
         };
 
         this.processStdout(parseLogMessage, this);
