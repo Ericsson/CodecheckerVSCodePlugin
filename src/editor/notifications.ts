@@ -99,6 +99,22 @@ export class NotificationHandler {
             };
         };
 
+        const makeReason = (): (Command)[] => {
+            if (!status.reason) {
+                return [];
+            }
+
+            return [{
+                title: `Reason: ${status.reason}`,
+                command: 'codechecker.executor.showOutput',
+                tooltip: `Reason: ${status.reason}\nSee the output log for full details`
+            },
+            {
+                title: 'Show process logs',
+                command: 'codechecker.executor.showOutput'
+            }];
+        };
+
         switch (status.type) {
         case ProcessStatusType.queued: {
             const newNotification = SidebarContainer.notificationView.addNotification(
@@ -148,7 +164,16 @@ export class NotificationHandler {
         case ProcessStatusType.finished: {
             notification!.update({
                 message: makeMessage('finished running'),
-                choices: []
+                choices: makeReason()
+            });
+            this.activeNotifications.delete(process.commandLine);
+
+            break;
+        }
+        case ProcessStatusType.warning: {
+            notification!.update({
+                message: makeMessage('finished with warnings'),
+                choices: makeReason()
             });
             this.activeNotifications.delete(process.commandLine);
 
@@ -157,10 +182,7 @@ export class NotificationHandler {
         case ProcessStatusType.errored: {
             notification!.update({
                 message: makeMessage('finished with errors'),
-                choices: [{
-                    title: 'Show process logs',
-                    command: 'codechecker.executor.showOutput'
-                }]
+                choices: makeReason()
             });
             this.activeNotifications.delete(process.commandLine);
 
