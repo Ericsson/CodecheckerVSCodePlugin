@@ -8,7 +8,7 @@ export class LoggerPanel {
         ctx.subscriptions.push(this.window = window.createOutputChannel('CodeChecker'));
 
         ctx.subscriptions.push(
-            commands.registerCommand('codechecker.logging.showOutput', this.showOutputTab, this)
+            commands.registerCommand('codechecker.executor.showOutput', this.showOutputTab, this)
         );
 
         ExtensionApi.executorBridge.bridgeMessages(this.window.append, this.window, ctx.subscriptions);
