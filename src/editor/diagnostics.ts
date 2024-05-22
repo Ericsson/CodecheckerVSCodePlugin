@@ -1,4 +1,5 @@
 import {
+    ConfigurationChangeEvent,
     Diagnostic,
     DiagnosticCollection,
     DiagnosticRelatedInformation,
@@ -16,6 +17,7 @@ import {
 } from 'vscode';
 import { ExtensionApi } from '../backend';
 import { DiagnosticReport } from '../backend/types';
+import { Editor } from './editor';
 
 // Decoration type for highlighting report step positions.
 const reportStepDecorationType = window.createTextEditorDecorationType({
@@ -27,14 +29,6 @@ const reportStepDecorationType = window.createTextEditorDecorationType({
 });
 
 // TODO: implement api
-
-// Get diagnostics severity for the given CodeChecker severity.
-function getDiagnosticSeverity(severity: string): DiagnosticSeverity {
-    if (severity === 'STYLE') {
-        return DiagnosticSeverity.Information;
-    }
-    return DiagnosticSeverity.Error;
-}
 
 // Get diagnostic related information for the given report.
 // eslint-disable-next-line no-unused-vars
@@ -71,26 +65,21 @@ function getRange(report: DiagnosticReport) {
     return new Range(startLine, report.column - 1, endLine, endColumn);
 }
 
-function getDiagnostic(report: DiagnosticReport): Diagnostic {
-    const severity = report.severity || 'UNSPECIFIED';
-
-    return {
-        message: `[${severity}] ${report.message} [${report.checker_name}]`,
-        range: getRange(report),
-        // FIXME: for now it's not possible to attach custom commands to related informations. Later if it will be
-        // available through the VSCode API we can show related information here.
-        // relatedInformation: getRelatedInformation(report),
-        severity: getDiagnosticSeverity(severity),
-        source: 'CodeChecker',
-    };
-}
-
 export class DiagnosticRenderer {
     private _diagnosticCollection: DiagnosticCollection;
     private _lastUpdatedFiles: Uri[] = [];
     private _openedFiles: Uri[] = [];
+    private customSeverities?: {[codecheckerSeverity: string]: string};
+    private _severityMap: {[userSeverity: string]: DiagnosticSeverity} = {
+        'error': DiagnosticSeverity.Error,
+        'warning': DiagnosticSeverity.Warning,
+        'information': DiagnosticSeverity.Information,
+        'hint': DiagnosticSeverity.Hint
+    };
 
     constructor(ctx: ExtensionContext) {
+        this.customSeverities = workspace.getConfiguration('codechecker.editor').get('customBugSeverities');
+
         ctx.subscriptions.push(this._diagnosticCollection = languages.createDiagnosticCollection('codechecker'));
 
         ExtensionApi.diagnostics.diagnosticsUpdated(this.onDiagnosticUpdated, this, ctx.subscriptions);
@@ -106,6 +95,8 @@ export class DiagnosticRenderer {
                 }
             }
         });
+
+        workspace.onDidChangeConfiguration(this.onConfigChanged, this, ctx.subscriptions);
     }
 
     onDiagnosticUpdated() {
@@ -118,6 +109,12 @@ export class DiagnosticRenderer {
 
         this.updateAllDiagnostics();
         this.highlightActiveBugStep();
+    }
+
+    onConfigChanged(event: ConfigurationChangeEvent) {
+        if (event.affectsConfiguration('codechecker.editor')) {
+            this.customSeverities = workspace.getConfiguration('codechecker.editor').get('customBugSeverities');
+        }
     }
 
     clearBugStepDecorations(editor: TextEditor) {
@@ -152,12 +149,47 @@ export class DiagnosticRenderer {
         editor.setDecorations(reportStepDecorationType, ranges);
     }
 
+    // Get diagnostics severity for the given CodeChecker severity.
+    getDiagnosticSeverity(severity: string): DiagnosticSeverity {
+        if (this.customSeverities && this.customSeverities[severity]) {
+            const severityString = this.customSeverities[severity];
+
+            if (typeof severityString === 'string' && this._severityMap[severityString.toLowerCase()]) {
+                return this._severityMap[severityString.toLowerCase()];
+            } else {
+                Editor.loggerPanel.window.appendLine(
+                    `>>> Invalid editor display type for CodeChecker severity ${severity}`
+                );
+            }
+        }
+
+        if (severity === 'STYLE') {
+            return DiagnosticSeverity.Information;
+        }
+
+        return DiagnosticSeverity.Error;
+    }
+
+    getDiagnostic(report: DiagnosticReport): Diagnostic {
+        const severity = report.severity || 'UNSPECIFIED';
+
+        return {
+            message: `[${severity}] ${report.message} [${report.checker_name}]`,
+            range: getRange(report),
+            // FIXME: for now it's not possible to attach custom commands to related informations. Later if it will be
+            // available through the VSCode API we can show related information here.
+            // relatedInformation: getRelatedInformation(report),
+            severity: this.getDiagnosticSeverity(severity),
+            source: 'CodeChecker',
+        };
+    }
+
     // TODO: Implement CancellableToken
     updateAllDiagnostics(): void {
         const diagnosticMap: Map<string, Diagnostic[]> = new Map();
         const updateDiagnosticMap = (report: DiagnosticReport) => {
             const file = Uri.file(report.file.original_path);
-            diagnosticMap.get(file.toString())?.push(getDiagnostic(report));
+            diagnosticMap.get(file.toString())?.push(this.getDiagnostic(report));
         };
 
         // Update "regular" errors in files

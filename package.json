@@ -158,6 +158,14 @@
           "description": "Enable CodeLens for displaying the reproduction path",
           "default": true
         },
+        "codechecker.editor.customBugSeverities": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Control how a bug is displayed in the editor, depending on what its severity is. Bugs can be displayed as 'Error', 'Warning', 'Information' or 'Hint'. By default, everything except 'STYLE' severity is displayed as an error.",
+          "default": null
+        },
         "codechecker.executor.enableNotifications": {
           "type": "boolean",
           "description": "Enable pop-up notifications. Past messages are accessible via the sidebar menu regardless of this setting.",
