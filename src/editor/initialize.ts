@@ -1,4 +1,4 @@
-import { ExtensionContext, commands, window, workspace } from 'vscode';
+import { ExtensionContext, Uri, commands, window, workspace } from 'vscode';
 import { ExtensionApi } from '../backend';
 import { Editor } from './editor';
 import { NotificationType } from './notifications';
@@ -42,6 +42,13 @@ export class FolderInitializer {
             {
                 title: 'Locate',
                 command: 'codechecker.internal.locateCompilationDatabase'
+            },
+            {
+                title: 'More info',
+                command: 'vscode.open',
+                arguments: [ Uri.parse(
+                    'https://github.com/Ericsson/CodeCheckerVSCodePlugin#setting-up-your-build-environment'
+                ) ]
             }
         ];
         const disableDialogChoice = {

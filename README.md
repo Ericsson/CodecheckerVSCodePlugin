@@ -12,13 +12,15 @@ This is a C/C++ code analysis plugin for VSCode that shows bug reports detected 
 
 1. [Install CodeChecker] version 6.18.2 or later, and optionally add it to the `PATH` environment variable.
 2. Install the CodeChecker extension from the [Visual Studio Marketplace], from [Open VSX], or download manually from [Downloads].
-3. Check the path to CodeChecker, and set your preferred command-line arguments - see [Configuring CodeChecker] for more information.
-4. Open your project, and run an analysis, or browse through the found reports!
+3. [Set up your build environment] to generate a `compile_commands.json` file.
+4. Check the path to CodeChecker, and set your preferred command-line arguments - see [Configuring CodeChecker] for more information.
+5. Open your project, and run an analysis, or browse through the found reports!
 
 [Install CodeChecker]: https://github.com/Ericsson/CodeChecker#install-guide
 [Visual Studio Marketplace]: https://marketplace.visualstudio.com/items?itemName=codechecker.vscode-codechecker
 [Open VSX]: https://open-vsx.org/extension/codechecker/codechecker
 [Downloads]: https://github.com/Ericsson/CodecheckerVSCodePlugin/releases
+[Set up your build environment]: #setting-up-your-build-environment
 [Configuring CodeChecker]: #configuring-codechecker
 
 ## Features
@@ -36,6 +38,17 @@ This is a C/C++ code analysis plugin for VSCode that shows bug reports detected 
 - Commands and build tasks for running CodeChecker as part of a build system
 
 ![Commands and tasks](media/codechecker-tasks.gif)
+
+## Setting up your build environment
+
+CodeChecker works by reading a generated compilation database, often called `compile_commands.json`, and executing specific analyses based on that.
+
+`CMake` has built-in support for generating a compilation database. Set the environment variable `CMAKE_EXPORT_COMPILE_COMMANDS=ON`, and the compilation database should be inside your build folder.
+If you are using the `CMake Tools` extension for VS Code, you can add this flag to the extension settings under `Cmake > Build Environment`.
+
+`make` and other build systems have no built-in support for generating a compilation database, but CodeChecker can generate one based on the build command. To generate one, you can use the command `CodeChecker log -b "[full build command]" -o .codechecker/compile_commands.json`.
+
+To automate the process, the extension provides ways to run the `CodeChecker log` command automatically. First, in the Extension Settings set `CodeChecker > Executor > Log build command`, and then use either the VS Code Task, or the VS Code command `CodeChecker: Run CodeChecker Log` to execute the analysis. You can also run `CodeChecker: Preview CodeChecker log in terminal` to have more fine-grained control over the parameters passed to CodeChecker.
 
 ## Configuring CodeChecker
 
