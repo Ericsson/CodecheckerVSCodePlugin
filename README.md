@@ -96,6 +96,7 @@ Since CodeChecker-related paths vary greatly between systems, the following sett
 | CodeChecker > Executor > Run on save <br> (default: `on`) | Controls auto-run of CodeChecker on saving a file. |
 
 ## Development
+_Note_: If you have already installed this extension from Marketplace, uninstall it first to prevent conflicts with your own build.
 
 This extension uses Node.js (v12+) and Yarn (v2+).
 Recommended VS Code extensions are [ESLint] and [TypeScript+Webpack Problem Matcher]
