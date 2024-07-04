@@ -138,7 +138,7 @@
         },
         "codechecker.executor.logBuildCommand": {
           "type": "string",
-          "description": "The build command passed to CodeChecker log.",
+          "description": "The build command passed to CodeChecker log. Some build systems do not need to be run via CodeChecker log - see the extension's docs for details.",
           "default": "make",
           "order": 6
         },
