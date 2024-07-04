@@ -128,7 +128,7 @@
         "codechecker.analyze.arguments": {
           "type": "string",
           "description": "Additional arguments to CodeChecker analyze command. For example, if you want to use a config file for CodeChecker pass '--config <config.json>'. For supported arguments, run `CodeChecker analyze --help`. The command `CodeChecker: Show full command line` command shows the resulting command line.",
-          "default": "",
+          "default": "--analyzer-config clangsa:mode=shallow",
           "order": 4
         },
         "codechecker.executor.threadCount": {
@@ -145,7 +145,7 @@
             "null"
           ],
           "description": "CodeChecker's thread count - leave empty to use all threads",
-          "default": null,
+          "default": 4,
           "minimum": 1,
           "order": 5
         },
