@@ -159,12 +159,24 @@
           "default": true
         },
         "codechecker.editor.customBugSeverities": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "description": "Control how a bug is displayed in the editor, depending on what its severity is. Bugs can be displayed as 'Error', 'Warning', 'Information' or 'Hint'. By default, everything except 'STYLE' severity is displayed as an error.",
-          "default": null
+          "type": "object",
+          "description": "Control how a bug is displayed in the editor, depending on what its severity is.",
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "Error",
+              "Warning",
+              "Information",
+              "Hint"
+            ]
+          },
+          "default": {
+            "HIGH": "Error",
+            "MEDIUM": "Error",
+            "LOW": "Error",
+            "UNSPECIFIED": "Error",
+            "STYLE": "Warning"
+          }
         },
         "codechecker.executor.enableNotifications": {
           "type": "boolean",
