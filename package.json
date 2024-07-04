@@ -122,11 +122,24 @@
         },
         "codechecker.executor.arguments": {
           "type": "string",
+          "description": "Additional arguments to CodeChecker's analyze command. For example, if you want to use a config file for CodeChecker pass '--config <config.json>'. For supported arguments, run `CodeChecker analyze --help`. The command `CodeChecker: Show full command line` command shows the resulting command line.",
+          "deprecationMessage": "This setting is deprecated. Use `codechecker.analyze.arguments` instead."
+        },
+        "codechecker.analyze.arguments": {
+          "type": "string",
           "description": "Additional arguments to CodeChecker analyze command. For example, if you want to use a config file for CodeChecker pass '--config <config.json>'. For supported arguments, run `CodeChecker analyze --help`. The command `CodeChecker: Show full command line` command shows the resulting command line.",
           "default": "",
           "order": 4
         },
         "codechecker.executor.threadCount": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "CodeChecker's thread count - leave empty to use all threads",
+          "deprecationMessage": "This setting is deprecated. Use `codechecker.analyze.threadCount` instead."
+        },
+        "codechecker.analyze.threadCount": {
           "type": [
             "number",
             "null"
@@ -139,10 +152,20 @@
         "codechecker.executor.logBuildCommand": {
           "type": "string",
           "description": "The build command passed to CodeChecker log.",
+          "deprecationMessage": "This setting is deprecated. Use `codechecker.log.buildCommand` instead."
+        },
+        "codechecker.log.buildCommand": {
+          "type": "string",
+          "description": "The build command passed to CodeChecker log.",
           "default": "make",
           "order": 6
         },
         "codechecker.executor.logArguments": {
+          "type": "string",
+          "description": "Additional arguments to CodeChecker log command. For supported arguments, run `CodeChecker log --help`. The command `CodeChecker: Preview CodeChecker log in terminal` command shows the resulting command line.",
+          "deprecationMessage": "This setting is deprecated. Use `codechecker.log.arguments` instead."
+        },
+        "codechecker.log.arguments": {
           "type": "string",
           "description": "Additional arguments to CodeChecker log command. For supported arguments, run `CodeChecker log --help`. The command `CodeChecker: Preview CodeChecker log in terminal` command shows the resulting command line.",
           "default": "",
@@ -164,6 +187,11 @@
           "default": true
         },
         "codechecker.executor.runOnSave": {
+          "type": "boolean",
+          "description": "Controls auto-run of CodeChecker on save",
+          "deprecationMessage": "This setting is deprecated. Use `codechecker.analyze.runOnSave` instead."
+        },
+        "codechecker.analyze.runOnSave": {
           "type": "boolean",
           "description": "Controls auto-run of CodeChecker on save",
           "default": true
