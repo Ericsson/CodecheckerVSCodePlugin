@@ -158,6 +158,26 @@
           "description": "Enable CodeLens for displaying the reproduction path",
           "default": true
         },
+        "codechecker.editor.customBugSeverities": {
+          "type": "object",
+          "description": "Control how a bug is displayed in the editor, depending on what its severity is.",
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "Error",
+              "Warning",
+              "Information",
+              "Hint"
+            ]
+          },
+          "default": {
+            "HIGH": "Error",
+            "MEDIUM": "Error",
+            "LOW": "Error",
+            "UNSPECIFIED": "Error",
+            "STYLE": "Warning"
+          }
+        },
         "codechecker.executor.enableNotifications": {
           "type": "boolean",
           "description": "Enable pop-up notifications. Past messages are accessible via the sidebar menu regardless of this setting.",
