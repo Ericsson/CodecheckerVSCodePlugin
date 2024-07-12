@@ -41,7 +41,7 @@ This is a C/C++ code analysis plugin for VSCode that shows bug reports detected 
 
 ## Setting up your build environment
 
-CodeChecker works by reading a generated compilation database, often called `compile_commands.json`, and executing specific analyses based on that.
+CodeChecker works by reading a generated [compilation database], often called `compile_commands.json`, and executing specific analyses based on that.
 
 `CMake` has built-in support for generating a compilation database. Set the environment variable `CMAKE_EXPORT_COMPILE_COMMANDS=ON`, and the compilation database should be inside your build folder.
 If you are using the `CMake Tools` extension for VS Code, you can add this flag to the extension settings under `Cmake > Build Environment`.
@@ -49,6 +49,8 @@ If you are using the `CMake Tools` extension for VS Code, you can add this flag 
 `make` and other build systems have no built-in support for generating a compilation database, but CodeChecker can generate one based on the build command. To generate one, you can use the command `CodeChecker log -b "[full build command]" -o .codechecker/compile_commands.json`.
 
 To automate the process, the extension provides ways to run the `CodeChecker log` command automatically. First, in the Extension Settings set `CodeChecker > Executor > Log build command`, and then use either the VS Code Task, or the VS Code command `CodeChecker: Run CodeChecker Log` to execute the analysis. You can also run `CodeChecker: Preview CodeChecker log in terminal` to have more fine-grained control over the parameters passed to CodeChecker.
+
+[compilation database]: https://clang.llvm.org/docs/JSONCompilationDatabase.html
 
 ## Configuring CodeChecker
 
