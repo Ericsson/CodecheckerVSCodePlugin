@@ -1,6 +1,6 @@
 import { Command, ConfigurationChangeEvent, ExtensionContext, commands, window, workspace } from 'vscode';
 import { ExtensionApi } from '../backend';
-import { ProcessStatus, ProcessType, ScheduledProcess } from '../backend/executor';
+import { ProcessStatus, ProcessStatusType, ProcessType, ScheduledProcess } from '../backend/executor';
 import { SidebarContainer } from '../sidebar';
 import { NotificationItem } from '../sidebar/views';
 
@@ -87,7 +87,7 @@ export class NotificationHandler {
         }
 
         const notification = this.activeNotifications.get(process.commandLine);
-        if (notification === undefined && status !== ProcessStatus.queued) {
+        if (notification === undefined && status.type !== ProcessStatusType.queued) {
             return;
         }
 
@@ -99,8 +99,24 @@ export class NotificationHandler {
             };
         };
 
-        switch (status) {
-        case ProcessStatus.queued: {
+        const makeReason = (): (Command)[] => {
+            if (!status.reason) {
+                return [];
+            }
+
+            return [{
+                title: `Reason: ${status.reason}`,
+                command: 'codechecker.executor.showOutput',
+                tooltip: `Reason: ${status.reason}\nSee the output log for full details`
+            },
+            {
+                title: 'Show process logs',
+                command: 'codechecker.executor.showOutput'
+            }];
+        };
+
+        switch (status.type) {
+        case ProcessStatusType.queued: {
             const newNotification = SidebarContainer.notificationView.addNotification(
                 'browser', makeMessage('added to the process queue'), [
                     {
@@ -118,7 +134,7 @@ export class NotificationHandler {
 
             break;
         }
-        case ProcessStatus.running: {
+        case ProcessStatusType.running: {
             notification!.silentUpdate({ choices: [] });
 
             const newNotification = SidebarContainer.notificationView.addNotification(
@@ -136,7 +152,7 @@ export class NotificationHandler {
 
             break;
         }
-        case ProcessStatus.killed: {
+        case ProcessStatusType.killed: {
             notification!.update({
                 message: makeMessage('was killed'),
                 choices: []
@@ -145,28 +161,34 @@ export class NotificationHandler {
 
             break;
         }
-        case ProcessStatus.finished: {
+        case ProcessStatusType.finished: {
             notification!.update({
                 message: makeMessage('finished running'),
-                choices: []
+                choices: makeReason()
             });
             this.activeNotifications.delete(process.commandLine);
 
             break;
         }
-        case ProcessStatus.errored: {
+        case ProcessStatusType.warning: {
+            notification!.update({
+                message: makeMessage('finished with warnings'),
+                choices: makeReason()
+            });
+            this.activeNotifications.delete(process.commandLine);
+
+            break;
+        }
+        case ProcessStatusType.errored: {
             notification!.update({
                 message: makeMessage('finished with errors'),
-                choices: [{
-                    title: 'Show process logs',
-                    command: 'codechecker.executor.showOutput'
-                }]
+                choices: makeReason()
             });
             this.activeNotifications.delete(process.commandLine);
 
             break;
         }
-        case ProcessStatus.removed: {
+        case ProcessStatusType.removed: {
             notification!.update({
                 message: makeMessage('removed from the process queue'),
                 type: 'browser',

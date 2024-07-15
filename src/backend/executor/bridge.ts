@@ -17,7 +17,7 @@ import {
     parseShellArgsAndReplaceVariables,
     replaceVariables
 } from '../../utils/config';
-import { ProcessStatus, ProcessType, ScheduledProcess } from '.';
+import { ProcessStatusType, ProcessType, ScheduledProcess } from '.';
 import { NotificationType } from '../../editor/notifications';
 import { Editor } from '../../editor';
 
@@ -461,7 +461,7 @@ export class ExecutorBridge implements Disposable {
         process.processStdout((output) => processOutput += output);
 
         process.processStatusChange((status) => {
-            if (status === ProcessStatus.finished) {
+            if (status.type === ProcessStatusType.finished) {
                 ExtensionApi.metadata.parseCheckerData(processOutput);
             }
         });
@@ -504,7 +504,7 @@ export class ExecutorBridge implements Disposable {
         process.processStdout((output) => processOutput += output);
 
         process.processStatusChange((status) => {
-            if (status === ProcessStatus.finished) {
+            if (status.type === ProcessStatusType.finished) {
                 ExtensionApi.diagnostics.parseDiagnosticsData(processOutput);
             }
         });
@@ -558,9 +558,9 @@ export class ExecutorBridge implements Disposable {
             process.processStdout((output) => processOutput += output);
 
             process.processStatusChange(async (status) => {
-                switch (status) {
-                case ProcessStatus.running: return;
-                case ProcessStatus.finished:
+                switch (status.type) {
+                case ProcessStatusType.running: return;
+                case ProcessStatusType.finished:
                     try {
                         const data = JSON.parse(processOutput) as AnalyzerVersion;
 
@@ -651,7 +651,7 @@ export class ExecutorBridge implements Disposable {
                     }
 
                     break;
-                case ProcessStatus.removed:
+                case ProcessStatusType.removed:
                     if (this.checkedVersion === undefined) {
                         this.checkedVersion = false;
                     }
