@@ -100,6 +100,7 @@ Since CodeChecker-related paths vary greatly between systems, the following sett
 | --- | --- |
 | CodeChecker > Backend > Output folder <br> (default: `${workspaceFolder}/.codechecker`) | The output folder where the CodeChecker analysis files are stored. |
 | CodeChecker > Backend > Compilation database path <br> (default: *(empty)*) | Path to a custom compilation database, in case of a custom build system. The database setup dialog sets the path for the current workspace only. Leave blank to use the database in CodeChecker's output folder, or to use CodeChecker's autodetection for multi-root workspaces. |
+| CodeChecker > Editor > Custom bug severities <br> (default: `null`) | Control how a bug is displayed in the editor, depending on what its severity is. Bugs can be displayed as 'Error', 'Warning', 'Information' or 'Hint'. By default, everything except 'STYLE' severity is displayed as an error. Configured as an array, such as `{ "UNSPECIFIED": "Warning", "LOW": "Warning" }` |
 | CodeChecker > Editor > Show database dialog <br> (default: `on`) | Controls the dialog when opening a workspace without a compilation database. |
 | CodeChecker > Editor > Enable CodeLens <br> (default: `on`) | Enable CodeLens for displaying the reproduction path in the editor. |
 | CodeChecker > Executor > Enable notifications <br> (default: `on`) | Enable CodeChecker-related toast notifications. |
@@ -111,6 +112,7 @@ Since CodeChecker-related paths vary greatly between systems, the following sett
 | CodeChecker > Executor > Run on save <br> (default: `on`) | Controls auto-run of CodeChecker on saving a file. |
 
 ## Development
+_Note_: If you have already installed this extension from Marketplace, uninstall it first to prevent conflicts with your own build.
 
 This extension uses Node.js (v12+) and Yarn (v2+).
 Recommended VS Code extensions are [ESLint] and [TypeScript+Webpack Problem Matcher]
