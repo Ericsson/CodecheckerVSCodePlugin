@@ -185,11 +185,16 @@ export class ExecutorBridge implements Disposable {
 
         const reportsFolder = this.getReportsFolder();
 
-        const ccArgumentsSetting = workspace.getConfiguration('codechecker.executor').get<string>('arguments');
+        const executorConfig = workspace.getConfiguration('codechecker.executor');
+        const analyzeConfig = workspace.getConfiguration('codechecker.analyze');
+
+        const ccArgumentsSetting = analyzeConfig.has('arguments') ? analyzeConfig.get<string>('arguments')
+            : executorConfig.has('arguments') ? executorConfig.get<string>('arguments') : undefined;
 
         const ccArguments = parseShellArgsAndReplaceVariables(ccArgumentsSetting ?? '');
 
-        const ccThreads = workspace.getConfiguration('codechecker.executor').get<string>('threadCount');
+        const ccThreads = analyzeConfig.has('threadCount') ? analyzeConfig.get<string>('threadCount')
+            : executorConfig.has('threadCount') ? executorConfig.get<string>('threadCount') : undefined;
         // FIXME: Add support for selecting a specific workspace folder
 
         const args = [
@@ -274,17 +279,27 @@ export class ExecutorBridge implements Disposable {
             return undefined;
         }
 
+        const executorConfig = workspace.getConfiguration('codechecker.executor');
+        const logConfig = workspace.getConfiguration('codechecker.log');
+
         if (buildCommand === undefined) {
-            buildCommand = getConfigAndReplaceVariables('codechecker.executor', 'logBuildCommand') ?? 'make';
+            buildCommand = logConfig.has('buildCommand')
+                ? getConfigAndReplaceVariables('codechecker.log', 'buildCommand')
+                : executorConfig.has('logBuildCommand')
+                    ? getConfigAndReplaceVariables('codechecker.executor', 'logBuildCommand')
+                    : undefined;
         } else {
-            buildCommand = replaceVariables(buildCommand) ?? 'make';
+            buildCommand = replaceVariables(buildCommand);
         }
+
+        buildCommand = buildCommand ?? 'make';
 
         const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
         const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder')
             ?? path.join(workspaceFolder, '.codechecker');
 
-        const logArgumentsSetting = workspace.getConfiguration('codechecker.executor').get<string>('logArguments');
+        const logArgumentsSetting = logConfig.has('arguments') ? logConfig.get<string>('arguments')
+            : executorConfig.has('logArguments') ? executorConfig.get<string>('logArguments') : undefined;
         const logArguments = parseShellArgsAndReplaceVariables(logArgumentsSetting ?? '');
 
         // Use a predefined path as fallback here
@@ -326,7 +341,11 @@ export class ExecutorBridge implements Disposable {
     }
 
     private analyzeOnSave() {
-        const canAnalyzeOnSave = workspace.getConfiguration('codechecker.executor').get<boolean>('runOnSave');
+        const executorConfig = workspace.getConfiguration('codechecker.executor');
+        const analyzeConfig = workspace.getConfiguration('codechecker.analyze');
+
+        const canAnalyzeOnSave = analyzeConfig.has('runOnSave') ? analyzeConfig.get<boolean>('runOnSave')
+            : executorConfig.has('runOnSave') ? executorConfig.get<boolean>('runOnSave') : undefined;
 
         // Analyze even if the comp.db doesn't exists, for multi-root workspaces
         if (!canAnalyzeOnSave) {
@@ -402,9 +421,15 @@ export class ExecutorBridge implements Disposable {
 
     public async runLogCustomCommand(buildCommand?: string) {
         if (buildCommand === undefined) {
+            const executorConfig = workspace.getConfiguration('codechecker.executor');
+            const logConfig = workspace.getConfiguration('codechecker.log');
+
+            const logArguments = logConfig.has('arguments') ? logConfig.get<string>('arguments')
+                : executorConfig.has('logArguments') ? executorConfig.get<string>('logArguments') : undefined;
+
             buildCommand = await window.showInputBox({
                 prompt: 'Enter the build command to run with CodeChecker log',
-                value: getConfigAndReplaceVariables('codechecker.executor', 'logBuildCommand') ?? 'make'
+                value: logArguments ?? 'make'
             });
         }
 
