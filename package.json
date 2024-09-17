@@ -149,6 +149,12 @@
           "minimum": 1,
           "order": 5
         },
+        "codechecker.executor.analysisTimeout": {
+          "type": "number",
+          "description": "The timeout (in seconds) for each individual analysis run by the CodeChecker analyze command - set to 0 to disable the timeout",
+          "default": 60,
+          "order": 6
+        },
         "codechecker.executor.logBuildCommand": {
           "type": "string",
           "description": "The build command passed to CodeChecker log.",
@@ -158,7 +164,7 @@
           "type": "string",
           "description": "The build command passed to CodeChecker log.",
           "default": "make",
-          "order": 6
+          "order": 7
         },
         "codechecker.executor.logArguments": {
           "type": "string",
@@ -169,7 +175,7 @@
           "type": "string",
           "description": "Additional arguments to CodeChecker log command. For supported arguments, run `CodeChecker log --help`. The command `CodeChecker: Preview CodeChecker log in terminal` command shows the resulting command line.",
           "default": "",
-          "order": 7
+          "order": 8
         },
         "codechecker.editor.showDatabaseDialog": {
           "type": "boolean",

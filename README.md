@@ -105,6 +105,7 @@ Since CodeChecker-related paths vary greatly between systems, the following sett
 | CodeChecker > Editor > Enable CodeLens <br> (default: `on`) | Enable CodeLens for displaying the reproduction path in the editor. |
 | CodeChecker > Executor > Enable notifications <br> (default: `on`) | Enable CodeChecker-related toast notifications. |
 | CodeChecker > Executor > Executable path <br> (default: `CodeChecker`) | Path to the CodeChecker executable. Can be an executable in the `PATH` environment variable, or an absolute path to one. |
+| CodeChecker > Executor > Analysis timeout <br> (default: *60*) | The timeout (in seconds) for each individual analysis run by the CodeChecker analyze command - set to 0 to disable the timeout. |
 | CodeChecker > Executor > Thread count <br> (default: *(empty)*) | CodeChecker's thread count - leave empty to use all threads. |
 | CodeChecker > Executor > Arguments <br> (default: *(empty)*) | Additional arguments to `CodeChecker analyze`. For example, if you want to use a config file for CodeChecker pass '--config <config.json>'. For supported arguments, run `CodeChecker analyze --help`. <br> *Note:* The resulting command-line can be previewed with the command `CodeChecker: Show full CodeChecker analyze command line`. |
 | CodeChecker > Executor > Log build command <br> (default: `make`) | The default build command used when running `CodeChecker log` via commands or tasks. |

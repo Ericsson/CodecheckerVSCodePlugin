@@ -197,6 +197,8 @@ export class ExecutorBridge implements Disposable {
             : executorConfig.has('threadCount') ? executorConfig.get<string>('threadCount') : undefined;
         // FIXME: Add support for selecting a specific workspace folder
 
+        const ccTimeout = workspace.getConfiguration('codechecker.executor').get<number>('analysisTimeout') ?? 0;
+
         const args = [
             'analyze',
             '--output', reportsFolder
@@ -204,6 +206,10 @@ export class ExecutorBridge implements Disposable {
 
         if (ccThreads) {
             args.push('-j', ccThreads);
+        }
+
+        if (ccTimeout > 0) {
+            args.push('--timeout', ccTimeout.toString());
         }
 
         if (this.checkedVersion < [6, 22, 0]) {
