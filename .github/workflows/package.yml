@@ -22,7 +22,7 @@ jobs:
             name: vscode-codechecker
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Enable Corepack
         run: corepack enable
@@ -45,7 +45,7 @@ jobs:
 
       - name: Create vsix artifact
         if: success()
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.registry }}-package
           path: ${{ steps.build.outputs.vsixPath }}
