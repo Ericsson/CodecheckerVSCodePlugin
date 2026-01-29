@@ -93,7 +93,14 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
 
     constructor(ctx: ExtensionContext) {
         ctx.subscriptions.push(this._onDidChangeTreeData = new EventEmitter());
-        window.onDidChangeActiveTextEditor(this.refreshBugList, this, ctx.subscriptions);
+        window.onDidChangeActiveTextEditor(editor => {
+            // this event is called twice by vscode. Ignore deactivation of the old editor.
+            if (!editor) {
+                return;
+            }
+
+            this.refreshBugList();
+        }, this, ctx.subscriptions);
 
         ExtensionApi.diagnostics.diagnosticsUpdated(() => {
             // FIXME: fired twice when a file is opened freshly.
