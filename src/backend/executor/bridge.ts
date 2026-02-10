@@ -4,6 +4,9 @@ import {
     EventEmitter,
     ExtensionContext,
     FileSystemWatcher,
+    ThemeColor,
+    ThemeIcon,
+    TreeItemCollapsibleState,
     Uri,
     commands,
     window,
@@ -20,6 +23,8 @@ import {
 import { ProcessStatusType, ProcessType, ScheduledProcess } from '.';
 import { NotificationType } from '../../editor/notifications';
 import { Editor } from '../../editor';
+import { SidebarContainer } from '../../sidebar';
+import { ReportTreeItem } from '../../sidebar/views';
 
 // Structure:
 //   CodeChecker analyzer version: \n {"base_package_version": "M.m.p", ...}
@@ -87,6 +92,9 @@ export class ExecutorBridge implements Disposable {
         );
         ctx.subscriptions.push(
             commands.registerCommand('codechecker.executor.analyzeProject', this.analyzeProject, this)
+        );
+        ctx.subscriptions.push(
+            commands.registerCommand('codechecker.executor.getFileAnalysisStatus', this.getFileAnalysisStatus, this)
         );
         ctx.subscriptions.push(
             commands.registerCommand('codechecker.executor.runCodeCheckerLog', this.runLogDefaultCommand, this)
@@ -421,6 +429,127 @@ export class ExecutorBridge implements Disposable {
         }
 
         const process = new ScheduledProcess(ccPath, commandArgs, { processType: ProcessType.analyze });
+
+        ExtensionApi.executorManager.addToQueue(process, 'replace');
+    }
+
+    public async getFileAnalysisStatus() {
+        if (!await this.checkVersion()) {
+            return;
+        }
+        if (this.checkedVersion < [ 6, 27, 0 ]) {
+            const statusNode = SidebarContainer.reportsView.getNodeById('statusItem');
+            statusNode?.setLabelAndIcon('Status report requires CodeChecker 6.27.0 or higher.');
+            return;
+        }
+
+        const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
+        const reportsFolder = this.getReportsFolder();
+        const fileUri = window.activeTextEditor?.document.uri;
+        const fsPath = fileUri?.fsPath;
+
+        const statusArgs = [
+            'parse',
+            '--status',
+            '--detailed',
+            '-e',
+            'json',
+            reportsFolder,
+            '--file',
+            fsPath ?? ''
+        ];
+
+        const process = new ScheduledProcess(ccPath, statusArgs, { processType: ProcessType.status });
+
+        let processOutput = '';
+        process.processStdout((output) => processOutput += output);
+        process.processStatusChange(async status => {
+            switch (status.type) {
+            case ProcessStatusType.errored:
+                break;
+            case ProcessStatusType.finished:
+                interface Analyzer {
+                    summary: {
+                        // eslint-disable-next-line @typescript-eslint/naming-convention
+                        'up-to-date': number,
+                        failed: number,
+                        missing: number,
+                        outdated: number
+                    }
+                    // eslint-disable-next-line @typescript-eslint/naming-convention
+                    'up-to-date': [],
+                    failed: [],
+                    missing: [],
+                    outdated: [],
+                }
+
+                const analyzers = JSON.parse(processOutput);
+                let uptodate = 0;
+                let outdated = 0;
+                let missing = 0;
+                let failed = 0;
+                const analyzerStatuses: ReportTreeItem[] = [];
+                if (analyzers.analyzers) {
+                    for (const [ analyzer, status ] of Object.entries(analyzers.analyzers)) {
+                        const s = status as Analyzer;
+                        let iconname = '';
+                        if (s.summary['up-to-date'] > 0) {
+                            uptodate++;
+                            iconname = 'check';
+                        }
+                        if (s.summary.outdated > 0) {
+                            outdated++;
+                            iconname = 'clock';
+                        }
+                        if (s.summary.failed > 0) {
+                            failed++;
+                            iconname = 'error';
+                        }
+                        if (s.summary.missing > 0) {
+                            missing++;
+                            iconname = 'question';
+                        }
+                        let existingStatusNode = SidebarContainer.reportsView.getNodeById(analyzer);
+                        if (!existingStatusNode) {
+                            existingStatusNode = new ReportTreeItem(analyzer, analyzer,
+                                new ThemeIcon(iconname), []);
+                            const report = SidebarContainer.reportsView.getNodeById('statusItem');
+                            existingStatusNode.parent = report;
+                            SidebarContainer.reportsView.addDynamicNode(analyzer, existingStatusNode);
+                            analyzerStatuses.push(existingStatusNode);
+                        } else {
+                            existingStatusNode.iconPath = new ThemeIcon(iconname);
+                        }
+                    }
+                }
+                const statusNode = SidebarContainer.reportsView.getNodeById('statusItem');
+                if (!statusNode) {
+                    return;
+                }
+                if (uptodate === 0 && outdated === 0 && missing === 0 && failed === 0) {
+                    statusNode?.setLabelAndIcon('Analysis info is unavailable',
+                        new ThemeIcon('question', new ThemeColor('charts.red')));
+                } else if (failed > 0) {
+                    statusNode?.setLabelAndIcon('Analysis failed',
+                        new ThemeIcon('error', new ThemeColor('charts.red')));
+                } else if (outdated === 0 && failed === 0) {
+                    statusNode?.setLabelAndIcon('Analysis is up-to-date',
+                        new ThemeIcon('check', new ThemeColor('charts.green')));
+                } else {
+                    statusNode?.setLabelAndIcon('Analysis is outdated',
+                        new ThemeIcon('clock', new ThemeColor('charts.red')));
+                }
+                if (analyzerStatuses.length > 0) {
+                    statusNode.setChildren(analyzerStatuses);
+                    statusNode.collapsibleState = TreeItemCollapsibleState.Collapsed;
+                }
+                SidebarContainer.reportsView.refreshNode();
+                statusNode.collapse();
+                break;
+            default:
+                break;
+            }
+        });
 
         ExtensionApi.executorManager.addToQueue(process, 'replace');
     }
