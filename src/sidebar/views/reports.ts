@@ -113,7 +113,6 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
     private treeItems: Map<string, ReportTreeItem> = new Map();
     private selectedTreeItems: ReportTreeItem[] = [];
     private dynamicTreeItems: Map<string, ReportTreeItem> = new Map();
-    private rootItems: ReportTreeItem[] = [];
 
     constructor(ctx: ExtensionContext) {
         ctx.subscriptions.push(this._onDidChangeTreeData = new EventEmitter());
@@ -122,7 +121,11 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
             if (editor === undefined) {
                 return;
             }
-            // this.refreshBugList();
+
+            if (editor.document.uri.scheme !== 'file') {
+                return;
+            }
+
             this.updateStatus();
         }, this, ctx.subscriptions);
 
@@ -171,6 +174,9 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
         });
 
         workspace.onDidChangeTextDocument(event => {
+            if (event.document.uri.scheme !== 'file') {
+                return;
+            }
             if (event?.document === window.activeTextEditor?.document) {
                 this.updateStatus();
             }
