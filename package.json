@@ -67,10 +67,6 @@
         "title": "CodeChecker: Analyze entire project"
       },
       {
-        "command": "codechecker.executor.getFileAnalysisStatus",
-        "title": "CodeChecker: Get file analysis status"
-      },
-      {
         "command": "codechecker.executor.showCommandLine",
         "title": "CodeChecker: Show full CodeChecker analyze command line"
       },
