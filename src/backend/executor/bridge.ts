@@ -94,9 +94,6 @@ export class ExecutorBridge implements Disposable {
             commands.registerCommand('codechecker.executor.analyzeProject', this.analyzeProject, this)
         );
         ctx.subscriptions.push(
-            commands.registerCommand('codechecker.executor.getFileAnalysisStatus', this.getFileAnalysisStatus, this)
-        );
-        ctx.subscriptions.push(
             commands.registerCommand('codechecker.executor.runCodeCheckerLog', this.runLogDefaultCommand, this)
         );
         ctx.subscriptions.push(
