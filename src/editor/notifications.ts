@@ -168,6 +168,7 @@ export class NotificationHandler {
             });
             this.activeNotifications.delete(process.commandLine);
 
+            SidebarContainer.reportsView.updateStatus();
             break;
         }
         case ProcessStatusType.warning: {

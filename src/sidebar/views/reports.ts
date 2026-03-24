@@ -18,24 +18,39 @@ import {
 } from 'vscode';
 import { ExtensionApi } from '../../backend';
 import { DiagnosticReport } from '../../backend/types';
+import { SidebarContainer } from '../sidebar_container';
 
 export class ReportTreeItem extends TreeItem {
     parent: ReportTreeItem | undefined;
 
     constructor(
         public readonly _id: string,
-        public readonly label: string | TreeItemLabel,
-        public readonly iconPath: ThemeIcon,
-        public readonly children?: ReportTreeItem[] | undefined
+        label: string | TreeItemLabel,
+        iconPath: ThemeIcon,
+        public children?: ReportTreeItem[]
     ) {
-        super(label, children?.length ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None);
+        super(label, (children?.length) ?
+            TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None);
         this._id = _id;
         this.label = label;
-        this.iconPath = this.iconPath;
+        this.iconPath = iconPath;
         this.children = children;
 
         // Set parent for children automatically.
         this.children?.forEach(c => c.parent = this);
+    }
+
+    setLabelAndIcon(label?: string, iconPath?: ThemeIcon) {
+        if (label) {
+            this.label = label;
+        }
+        if (iconPath) {
+            this.iconPath = iconPath;
+        }
+    }
+
+    setChildren(children: ReportTreeItem[] | undefined) {
+        this.children = children;
     }
 
     // This function can be used to set ID attribute of a tree item and all the children of it based on the parent id.
@@ -52,6 +67,12 @@ export class ReportTreeItem extends TreeItem {
 
         if (this.parent !== undefined) {
             this.parent.expand();
+        }
+    }
+
+    collapse() {
+        if (this.collapsibleState === TreeItemCollapsibleState.Expanded) {
+            this.collapsibleState = TreeItemCollapsibleState.Collapsed;
         }
     }
 
@@ -84,22 +105,28 @@ const severityOrder: { [key: string]: number } = {
 
 export class ReportsView implements TreeDataProvider<ReportTreeItem> {
     protected currentFile?: Uri;
+    protected isDirty: boolean = false;
     protected currentEntryList?: DiagnosticReport[];
 
     protected tree?: TreeView<ReportTreeItem>;
     // Contains [fullpath => item] entries
     private treeItems: Map<string, ReportTreeItem> = new Map();
     private selectedTreeItems: ReportTreeItem[] = [];
+    private dynamicTreeItems: Map<string, ReportTreeItem> = new Map();
 
     constructor(ctx: ExtensionContext) {
         ctx.subscriptions.push(this._onDidChangeTreeData = new EventEmitter());
         window.onDidChangeActiveTextEditor(editor => {
-            // this event is called twice by vscode. Ignore deactivation of the old editor.
-            if (!editor) {
+            // event is called twice. Ignore deactivation of the previous editor.
+            if (editor === undefined) {
                 return;
             }
 
-            this.refreshBugList();
+            if (editor.document.uri.scheme !== 'file') {
+                return;
+            }
+
+            this.updateStatus();
         }, this, ctx.subscriptions);
 
         ExtensionApi.diagnostics.diagnosticsUpdated(() => {
@@ -120,6 +147,23 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
         ));
 
         this.init();
+        this.updateStatus();
+    }
+
+    public addDynamicNode(id: string, node: ReportTreeItem) {
+        this.dynamicTreeItems.set(id, node);
+    }
+
+    public getNodeById(id: string): ReportTreeItem | undefined {
+        return this.dynamicTreeItems.get(id);
+    }
+
+    public getAllNodes(): Map<string, ReportTreeItem> {
+        return this.treeItems;
+    }
+
+    public refreshNode() {
+        this._onDidChangeTreeData.fire();
     }
 
     protected init() {
@@ -127,6 +171,15 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
 
         this.tree?.onDidChangeSelection((item: TreeViewSelectionChangeEvent<ReportTreeItem>) => {
             this.selectedTreeItems = item.selection;
+        });
+
+        workspace.onDidChangeTextDocument(event => {
+            if (event.document.uri.scheme !== 'file') {
+                return;
+            }
+            if (event?.document === window.activeTextEditor?.document) {
+                this.updateStatus();
+            }
         });
     }
 
@@ -163,6 +216,24 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
         }
 
         this.currentEntryList = ExtensionApi.diagnostics.getFileDiagnostics(this.currentFile);
+        this._onDidChangeTreeData.fire();
+    }
+
+    updateStatus() {
+        if (window?.activeTextEditor?.document?.isDirty) {
+            const statusNode = SidebarContainer.reportsView.getNodeById('statusItem');
+            if (statusNode) {
+                statusNode?.setLabelAndIcon('Outdated (file is modified in the editor)', new ThemeIcon('edit'));
+                if (statusNode.children) {
+                    statusNode.children.forEach(child => {
+                        child.setLabelAndIcon(undefined, new ThemeIcon('edit'));
+                    });
+                }
+            }
+        } else {
+            const executorBridge =  ExtensionApi.executorBridge;
+            executorBridge.getFileAnalysisStatus();
+        }
         this._onDidChangeTreeData.fire();
     }
 
@@ -308,7 +379,10 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
     // Get root level items.
     getRootItems(): ReportTreeItem[] | undefined {
         if (!this.currentEntryList?.length) {
-            return [new ReportTreeItem('noReportsFound', 'No reports found', new ThemeIcon('pass'))];
+            const statusNode = SidebarContainer.reportsView.getNodeById('statusItem');
+            statusNode?.setLabelAndIcon('Not in compilation database',
+                new ThemeIcon('question', new ThemeColor('charts.orange')));
+            return statusNode ? [ statusNode ] : undefined;
         }
 
         const severityItems: { [key: string]: TreeDiagnosticReport[] } = {};
@@ -321,6 +395,13 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
         }
 
         const rootItems: ReportTreeItem[] = [];
+
+        let status = SidebarContainer.reportsView.getNodeById('statusItem');
+        if (!status) {
+            status = new ReportTreeItem('statusItem', 'Status', new ThemeIcon('warning'));
+            SidebarContainer.reportsView.addDynamicNode('statusItem', status);
+        }
+        rootItems.push(status);
 
         rootItems.push(...Object.entries(severityItems)
             .sort(([severityA]: [string, TreeDiagnosticReport[]], [severityB]: [string, TreeDiagnosticReport[]]) =>

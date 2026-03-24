@@ -85,6 +85,9 @@ export class DiagnosticRenderer {
         ExtensionApi.diagnostics.diagnosticsUpdated(this.onDiagnosticUpdated, this, ctx.subscriptions);
 
         workspace.onDidChangeTextDocument(({ document }) => {
+            if (document.uri.scheme !== 'file') {
+                return;
+            }
             // Clear bug step decorations when there are unpersisted changes in the current active text editor.
             const editor = window.activeTextEditor;
             if (document.uri.fsPath === editor?.document.uri.fsPath) {
