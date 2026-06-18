@@ -387,7 +387,7 @@ export class ExecutorBridge implements Disposable {
     public async analyzeCurrentFile() {
         const currentFile = window.activeTextEditor?.document.uri;
 
-        if (currentFile !== undefined) {
+        if (currentFile !== undefined && this.isSupportedFile(currentFile)) {
             await this.analyzeFile(currentFile);
         }
     }
@@ -927,5 +927,20 @@ export class ExecutorBridge implements Disposable {
         }
 
         this._databaseLocationChanged.fire();
+    }
+
+    private isSupportedFile(uri: Uri | undefined): boolean {
+        if (uri === undefined) {
+            return false;
+        }
+
+        const extensions = [
+            '.c',
+            '.cc',
+            '.cpp',
+            '.cxx'
+        ];
+
+        return extensions.find(ext => uri.path.endsWith(ext)) !== undefined;
     }
 }
