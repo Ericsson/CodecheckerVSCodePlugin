@@ -25,6 +25,8 @@ import { NotificationType } from '../../editor/notifications';
 import { Editor } from '../../editor';
 import { SidebarContainer } from '../../sidebar';
 import { ReportTreeItem } from '../../sidebar/views';
+import { isSupportedFile } from '../../utils/files';
+import { state } from '../../utils/state';
 
 // Structure:
 //   CodeChecker analyzer version: \n {"base_package_version": "M.m.p", ...}
@@ -116,8 +118,10 @@ export class ExecutorBridge implements Disposable {
             ExtensionApi.executorManager
         ));
 
-        this.updateCompilationDatabasePaths();
-        this.checkVersion();
+        if (state.workspaceSupported) {
+            this.updateCompilationDatabasePaths();
+            this.checkVersion();
+        }
     }
 
     dispose() {
@@ -387,13 +391,13 @@ export class ExecutorBridge implements Disposable {
     public async analyzeCurrentFile() {
         const currentFile = window.activeTextEditor?.document.uri;
 
-        if (currentFile !== undefined && this.isSupportedFile(currentFile)) {
+        if (currentFile !== undefined && isSupportedFile(currentFile)) {
             await this.analyzeFile(currentFile);
         }
     }
 
     public async analyzeFile(file: Uri) {
-        if (!await this.checkVersion()) {
+        if (!state.workspaceSupported || !await this.checkVersion()) {
             return;
         }
 
@@ -411,7 +415,7 @@ export class ExecutorBridge implements Disposable {
     }
 
     public async analyzeProject() {
-        if (!await this.checkVersion()) {
+        if (!state.workspaceSupported || !await this.checkVersion()) {
             return;
         }
 
@@ -431,9 +435,10 @@ export class ExecutorBridge implements Disposable {
     }
 
     public async getFileAnalysisStatus() {
-        if (!await this.checkVersion()) {
+        if (!state.workspaceSupported || !await this.checkVersion()) {
             return;
         }
+
         if (this.checkedVersion < [ 6, 27, 0 ]) {
             const statusNode = SidebarContainer.reportsView.getNodeById('statusItem');
             statusNode?.setLabelAndIcon('Status report requires CodeChecker 6.27.0 or higher.');
@@ -579,7 +584,7 @@ export class ExecutorBridge implements Disposable {
     }
 
     public async runLog(buildCommand?: string) {
-        if (!await this.checkVersion()) {
+        if (!state.workspaceSupported || !await this.checkVersion()) {
             return;
         }
 
@@ -599,7 +604,7 @@ export class ExecutorBridge implements Disposable {
     }
 
     public async reloadCheckerData() {
-        if (!await this.checkVersion()) {
+        if (!state.workspaceSupported || !await this.checkVersion()) {
             return;
         }
 
@@ -642,7 +647,7 @@ export class ExecutorBridge implements Disposable {
     }
 
     public async parseMetadata(...files: Uri[]) {
-        if (!await this.checkVersion()) {
+        if (!state.workspaceSupported || !await this.checkVersion()) {
             return;
         }
 
@@ -927,20 +932,5 @@ export class ExecutorBridge implements Disposable {
         }
 
         this._databaseLocationChanged.fire();
-    }
-
-    private isSupportedFile(uri: Uri | undefined): boolean {
-        if (uri === undefined) {
-            return false;
-        }
-
-        const extensions = [
-            '.c',
-            '.cc',
-            '.cpp',
-            '.cxx'
-        ];
-
-        return extensions.find(ext => uri.path.endsWith(ext)) !== undefined;
     }
 }

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ExtensionApi } from './backend';
 import { Editor } from './editor';
 import { SidebarContainer } from './sidebar';
+import { checkWorkspace } from './utils/files';
 
 export interface CodeCheckerExtension {
     extensionApi: typeof ExtensionApi,
@@ -14,6 +15,8 @@ export function activate(context: vscode.ExtensionContext): CodeCheckerExtension
     ExtensionApi.init(context);
     Editor.init(context);
     SidebarContainer.init(context);
+
+    checkWorkspace();
 
     console.log('Extension "codechecker" activated');
 
