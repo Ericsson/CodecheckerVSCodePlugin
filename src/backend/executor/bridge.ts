@@ -254,7 +254,15 @@ export class ExecutorBridge implements Disposable {
             } else if (files.length === 0) {
                 // FIXME: Add a way to analyze all open workspaces, or a selected one
                 this._bridgeMessages.fire('>>> Using CodeChecker\'s built-in compilation database resolver\n');
-                args.push(workspace.workspaceFolders[0].uri.fsPath);
+                let analysisPath;
+                const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder');
+                if (ccFolder !== undefined) {
+                    analysisPath = path.join(ccFolder, 'compile_commands.json');
+                } else {
+                    const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
+                    analysisPath = path.join(workspaceFolder, '.codechecker');
+                }
+                args.push(analysisPath);
             } else if (files.length === 1) {
                 this._bridgeMessages.fire('>>> Using CodeChecker\'s built-in compilation database resolver\n');
                 args.push(files[0].fsPath);

@@ -18,12 +18,12 @@ export function isSupportedFile(uri: Uri | undefined): boolean {
 
 export async function isSupportedWorkspace() {
     const supported = await workspace.findFiles(
-        `**/*.{${EXTENSIONS.join(',')}}`,
+        `**/*{${EXTENSIONS.join(',')}}`,
         '**/{node_modules,.git}/**',
         1
     );
 
-    return supported.length > 1;
+    return supported.length > 0;
 }
 
 export async function checkWorkspace() {
