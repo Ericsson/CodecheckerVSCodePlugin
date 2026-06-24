@@ -255,9 +255,12 @@ export class ExecutorBridge implements Disposable {
                 // FIXME: Add a way to analyze all open workspaces, or a selected one
                 this._bridgeMessages.fire('>>> Using CodeChecker\'s built-in compilation database resolver\n');
                 let analysisPath;
-                const ccFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder');
-                if (ccFolder !== undefined) {
-                    analysisPath = path.join(ccFolder, 'compile_commands.json');
+                const ccDbFolder = getConfigAndReplaceVariables('codechecker.backend', 'compilationDatabasePath');
+                const outputFolder = getConfigAndReplaceVariables('codechecker.backend', 'outputFolder');
+                if (ccDbFolder !== undefined) {
+                    analysisPath = path.join(ccDbFolder, 'compile_commands.json');
+                } else if (outputFolder !== undefined) {
+                    analysisPath = path.join(outputFolder, 'compile_commands.json');
                 } else {
                     const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
                     analysisPath = path.join(workspaceFolder, '.codechecker');
