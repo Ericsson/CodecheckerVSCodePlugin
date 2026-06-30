@@ -1,5 +1,6 @@
 import { Uri, workspace } from 'vscode';
 import { state } from './state';
+import { getConfigAndReplaceVariables } from './config';
 
 const EXTENSIONS = [
     '.c',
@@ -7,6 +8,8 @@ const EXTENSIONS = [
     '.cpp',
     '.cxx'
 ];
+
+export const COMPILE_COMMANDS_JSON = 'compile_commands.json';
 
 export function isSupportedFile(uri: Uri | undefined): boolean {
     if (uri === undefined) {
@@ -30,7 +33,7 @@ export async function checkWorkspace() {
     if (workspace.name === undefined) {
         state.workspaceSupported = false;
         console.log('No open workspace.');
-        return;
+        return false;
     }
     const supported = await isSupportedWorkspace();
     if (supported) {
@@ -39,4 +42,13 @@ export async function checkWorkspace() {
         state.workspaceSupported = false;
         console.log(`workspace ${workspace.name} does not contain supported files.`);
     }
+    return state.workspaceSupported;
+}
+
+export function getOutputFolder() {
+    return getConfigAndReplaceVariables('codechecker.backend', 'outputFolder');
+}
+
+export function getCompilationDatabasePath() {
+    return getConfigAndReplaceVariables('codechecker.backend', 'compilationDatabasePath');
 }

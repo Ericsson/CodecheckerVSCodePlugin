@@ -10,13 +10,14 @@ export interface CodeCheckerExtension {
     editor: typeof Editor
 }
 
-export function activate(context: vscode.ExtensionContext): CodeCheckerExtension {
+export async function activate(context: vscode.ExtensionContext): Promise<CodeCheckerExtension> {
     // Backend must be initialized before the frontend
-    ExtensionApi.init(context);
-    Editor.init(context);
-    SidebarContainer.init(context);
 
-    checkWorkspace();
+    if (await checkWorkspace()) {
+        ExtensionApi.init(context);
+        Editor.init(context);
+        SidebarContainer.init(context);
+    }
 
     console.log('Extension "codechecker" activated');
 
