@@ -19,6 +19,7 @@ import {
 import { ExtensionApi } from '../../backend';
 import { DiagnosticReport } from '../../backend/types';
 import { SidebarContainer } from '../sidebar_container';
+import { isSupportedFile } from '../../utils/files';
 
 export class ReportTreeItem extends TreeItem {
     parent: ReportTreeItem | undefined;
@@ -378,11 +379,23 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
 
     // Get root level items.
     getRootItems(): ReportTreeItem[] | undefined {
-        if (!this.currentEntryList?.length) {
+        if (!isSupportedFile(this.currentFile)) {
             const statusNode = SidebarContainer.reportsView.getNodeById('statusItem');
-            statusNode?.setLabelAndIcon('Not in compilation database',
-                new ThemeIcon('question', new ThemeColor('charts.orange')));
+            if (statusNode !== undefined) {
+                statusNode.setLabelAndIcon('Not supported by codechecker',
+                    new ThemeIcon('question', new ThemeColor('charts.orange')));
+                // statusNode.children = [];
+                statusNode.collapsibleState = TreeItemCollapsibleState.None;
+                const rootNode = statusNode.parent;
+                if (rootNode !== undefined) {
+                    rootNode.children = [ statusNode ];
+                }
+            }
             return statusNode ? [ statusNode ] : undefined;
+        }
+
+        if (this.currentEntryList === undefined) {
+            return undefined;
         }
 
         const severityItems: { [key: string]: TreeDiagnosticReport[] } = {};

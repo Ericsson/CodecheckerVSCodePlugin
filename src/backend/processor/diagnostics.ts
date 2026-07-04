@@ -41,6 +41,10 @@ export class DiagnosticsApi {
         return undefined;
     }
 
+    public fireDiagnosticsUpdate() {
+        this._diagnosticsUpdated.fire();
+    }
+
     public setSelectedEntry(position?: {file: string, idx: number}) {
         if (position) {
             const activeFile = this.getFileDiagnostics(Uri.file(position.file)) ?? [];
@@ -88,7 +92,8 @@ export class DiagnosticsApi {
             return;
         }
 
-        ExtensionApi.executorBridge.parseMetadata(...filesToLoad.map(file => Uri.file(file)))
+        ExtensionApi.executorBridge.parseMetadata(...filesToLoad
+            .map(file => Uri.file(file)))
             .catch((err: any) => console.log(`Internal error in reloadDiagnostics: ${err}`));
     }
 

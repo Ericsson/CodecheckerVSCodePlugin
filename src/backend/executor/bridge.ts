@@ -25,6 +25,12 @@ import { NotificationType } from '../../editor/notifications';
 import { Editor } from '../../editor';
 import { SidebarContainer } from '../../sidebar';
 import { ReportTreeItem } from '../../sidebar/views';
+import {
+    COMPILE_COMMANDS_JSON,
+    getCompilationDatabasePath,
+    getOutputFolder,
+    isSupportedFile } from '../../utils/files';
+import { state } from '../../utils/state';
 
 // Structure:
 //   CodeChecker analyzer version: \n {"base_package_version": "M.m.p", ...}
@@ -116,8 +122,10 @@ export class ExecutorBridge implements Disposable {
             ExtensionApi.executorManager
         ));
 
-        this.updateCompilationDatabasePaths();
-        this.checkVersion();
+        if (state.workspaceSupported) {
+            this.updateCompilationDatabasePaths();
+            this.checkVersion();
+        }
     }
 
     dispose() {
@@ -250,7 +258,18 @@ export class ExecutorBridge implements Disposable {
             } else if (files.length === 0) {
                 // FIXME: Add a way to analyze all open workspaces, or a selected one
                 this._bridgeMessages.fire('>>> Using CodeChecker\'s built-in compilation database resolver\n');
-                args.push(workspace.workspaceFolders[0].uri.fsPath);
+                let analysisPath;
+                const ccDbFolder = getCompilationDatabasePath();
+                const outputFolder = getOutputFolder();
+                if (ccDbFolder !== undefined) {
+                    analysisPath = path.join(ccDbFolder, COMPILE_COMMANDS_JSON);
+                } else if (outputFolder !== undefined) {
+                    analysisPath = path.join(outputFolder, COMPILE_COMMANDS_JSON);
+                } else {
+                    const workspaceFolder = workspace.workspaceFolders[0].uri.fsPath;
+                    analysisPath = path.join(workspaceFolder, '.codechecker');
+                }
+                args.push(analysisPath);
             } else if (files.length === 1) {
                 this._bridgeMessages.fire('>>> Using CodeChecker\'s built-in compilation database resolver\n');
                 args.push(files[0].fsPath);
@@ -387,13 +406,13 @@ export class ExecutorBridge implements Disposable {
     public async analyzeCurrentFile() {
         const currentFile = window.activeTextEditor?.document.uri;
 
-        if (currentFile !== undefined) {
+        if (currentFile !== undefined && isSupportedFile(currentFile)) {
             await this.analyzeFile(currentFile);
         }
     }
 
     public async analyzeFile(file: Uri) {
-        if (!await this.checkVersion()) {
+        if (!state.workspaceSupported || !await this.checkVersion()) {
             return;
         }
 
@@ -411,7 +430,7 @@ export class ExecutorBridge implements Disposable {
     }
 
     public async analyzeProject() {
-        if (!await this.checkVersion()) {
+        if (!state.workspaceSupported || !await this.checkVersion()) {
             return;
         }
 
@@ -431,9 +450,15 @@ export class ExecutorBridge implements Disposable {
     }
 
     public async getFileAnalysisStatus() {
-        if (!await this.checkVersion()) {
+        if (!state.workspaceSupported || !await this.checkVersion()) {
             return;
         }
+
+        const fileUri = window.activeTextEditor?.document.uri;
+        if (!isSupportedFile(fileUri)) {
+            return;
+        }
+
         if (this.checkedVersion < [ 6, 27, 0 ]) {
             const statusNode = SidebarContainer.reportsView.getNodeById('statusItem');
             statusNode?.setLabelAndIcon('Status report requires CodeChecker 6.27.0 or higher.');
@@ -442,7 +467,6 @@ export class ExecutorBridge implements Disposable {
 
         const ccPath = getConfigAndReplaceVariables('codechecker.executor', 'executablePath') || 'CodeChecker';
         const reportsFolder = this.getReportsFolder();
-        const fileUri = window.activeTextEditor?.document.uri;
         const fsPath = fileUri?.fsPath;
 
         const statusArgs = [
@@ -516,6 +540,7 @@ export class ExecutorBridge implements Disposable {
                             analyzerStatuses.push(existingStatusNode);
                         } else {
                             existingStatusNode.iconPath = new ThemeIcon(iconname);
+                            analyzerStatuses.push(existingStatusNode);
                         }
                     }
                 }
@@ -528,6 +553,9 @@ export class ExecutorBridge implements Disposable {
                         new ThemeIcon('question', new ThemeColor('charts.red')));
                 } else if (failed > 0) {
                     statusNode?.setLabelAndIcon('Analysis failed',
+                        new ThemeIcon('error', new ThemeColor('charts.red')));
+                } else if (missing > 0 && outdated === 0 && uptodate === 0) {
+                    statusNode?.setLabelAndIcon('Analysis is missing',
                         new ThemeIcon('error', new ThemeColor('charts.red')));
                 } else if (outdated === 0 && failed === 0) {
                     statusNode?.setLabelAndIcon('Analysis is up-to-date',
@@ -579,7 +607,7 @@ export class ExecutorBridge implements Disposable {
     }
 
     public async runLog(buildCommand?: string) {
-        if (!await this.checkVersion()) {
+        if (!state.workspaceSupported || !await this.checkVersion()) {
             return;
         }
 
@@ -599,7 +627,7 @@ export class ExecutorBridge implements Disposable {
     }
 
     public async reloadCheckerData() {
-        if (!await this.checkVersion()) {
+        if (!state.workspaceSupported || !await this.checkVersion()) {
             return;
         }
 
@@ -642,7 +670,12 @@ export class ExecutorBridge implements Disposable {
     }
 
     public async parseMetadata(...files: Uri[]) {
-        if (!await this.checkVersion()) {
+        if (!state.workspaceSupported || files.length === 0 || !await this.checkVersion()) {
+            return;
+        }
+
+        if (!files.find(uri => isSupportedFile(uri))) {
+            ExtensionApi.diagnostics.fireDiagnosticsUpdate();
             return;
         }
 
