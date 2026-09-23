@@ -31,9 +31,7 @@
     "code analysis"
   ],
   "activationEvents": [
-    "onCommand:codechecker.backend.reloadMetadata",
-    "onView:codechecker.views.overview",
-    "onFileSystem:file"
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "contributes": {

@@ -11,6 +11,7 @@ import {
 } from 'vscode';
 import { ExtensionApi } from '../../backend';
 import { CheckerMetadata } from '../../backend/types';
+import { state } from '../../utils/state';
 
 export class OverviewItem {
     constructor(private label: string | (() => string), private iconPath?: string, private command?: Command) {}
@@ -77,7 +78,13 @@ export class OverviewView implements TreeDataProvider<OverviewItem> {
             new OverviewItem(() => `Used analyzers: ${
                 Object.keys(ExtensionApi.metadata.metadata!.analyzers).join(', ')
             }`, 'tools'),
-        ]
+        ],
+        'notSupported': [
+            new OverviewItem(
+                'No supported files found in the workspace',
+                'notebook-state-error'
+            )
+        ],
     };
 
     private middleItems = [
@@ -176,10 +183,13 @@ export class OverviewView implements TreeDataProvider<OverviewItem> {
 
     constructor(ctx: ExtensionContext) {
         ctx.subscriptions.push(this._onDidChangeTreeData = new EventEmitter());
-        ExtensionApi.metadata.metadataUpdated(this.updateStats, this, ctx.subscriptions);
-        ExtensionApi.executorBridge.databaseLocationChanged(this.updateStats, this, ctx.subscriptions);
-
-        this.itemsList = [this.topItems.loading];
+        if (state.workspaceSupported) {
+            ExtensionApi.metadata.metadataUpdated(this.updateStats, this, ctx.subscriptions);
+            ExtensionApi.executorBridge.databaseLocationChanged(this.updateStats, this, ctx.subscriptions);
+            this.itemsList = [this.topItems.loading];
+        } else {
+            this.itemsList = [this.topItems.notSupported];
+        }
 
         ctx.subscriptions.push(this.tree = window.createTreeView(
             'codechecker.views.overview',

@@ -1,11 +1,14 @@
 import { ExtensionContext } from 'vscode';
 import { NotificationView, OverviewView, ReportsView } from './views';
+import { state } from '../utils/state';
 
 export class SidebarContainer {
     static init(ctx: ExtensionContext): void {
         this._overviewView = new OverviewView(ctx);
-        this._reportsView = new ReportsView(ctx);
-        this._notificationView = new NotificationView(ctx);
+        if (state.workspaceSupported) {
+            this._reportsView = new ReportsView(ctx);
+            this._notificationView = new NotificationView(ctx);
+        }
     }
 
     private static _overviewView: OverviewView;

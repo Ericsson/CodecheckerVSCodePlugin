@@ -157,7 +157,7 @@ export class DiagnosticRenderer {
         if (this.customSeverities && this.customSeverities[severity]) {
             const severityString = this.customSeverities[severity];
 
-            if (typeof severityString === 'string' && this._severityMap[severityString.toLowerCase()]) {
+            if (typeof severityString === 'string' && this._severityMap[severityString.toLowerCase()] !== undefined) {
                 return this._severityMap[severityString.toLowerCase()];
             } else {
                 Editor.loggerPanel.window.appendLine(

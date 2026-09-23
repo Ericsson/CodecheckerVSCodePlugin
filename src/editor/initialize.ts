@@ -2,6 +2,7 @@ import { ExtensionContext, Uri, commands, window, workspace } from 'vscode';
 import { ExtensionApi } from '../backend';
 import { Editor } from './editor';
 import { NotificationType } from './notifications';
+import { state } from '../utils/state';
 
 export class FolderInitializer {
     constructor(_ctx: ExtensionContext) {
@@ -27,7 +28,7 @@ export class FolderInitializer {
     async showDialog() {
         const workspaceFolder = workspace.workspaceFolders?.length && workspace.workspaceFolders[0].uri;
 
-        if (!workspaceFolder) {
+        if (!workspaceFolder || !state.workspaceSupported) {
             return;
         }
 
