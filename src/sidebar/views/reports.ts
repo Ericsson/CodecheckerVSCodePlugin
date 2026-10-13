@@ -241,7 +241,7 @@ export class ReportsView implements TreeDataProvider<ReportTreeItem> {
         const selectedIds = new Set(this.selectedTreeItems.map(item => item.id));
         this.treeItems.forEach(root => root.traverse(item => {
             if (selectedIds.has(item.id)) {
-                void this.tree?.reveal(item, { select: true, focus: true });
+                void this.tree?.reveal(item, { select: true, focus: false });
             }
         }));
     }
