@@ -576,7 +576,9 @@ export class ExecutorBridge implements Disposable {
             }
         });
 
-        ExtensionApi.executorManager.addToQueue(process, 'replace');
+        ExtensionApi.executorManager.addToQueue(process, 'replace', () => {
+            SidebarContainer.reportsView.refreshNode();
+        });
     }
 
     public async runLogCustomCommand(buildCommand?: string) {

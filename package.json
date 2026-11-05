@@ -287,7 +287,8 @@
           "id": "codechecker.views.overview",
           "name": "Overview",
           "icon": "media/codechecker_logo.svg",
-          "contextualTitle": "CodeChecker"
+          "contextualTitle": "CodeChecker",
+          "when": "codechecker.hasWorkspace"
         },
         {
           "id": "codechecker.views.reports",
@@ -300,7 +301,8 @@
           "id": "codechecker.views.notifications",
           "name": "Recent notifications",
           "icon": "media/codechecker_logo.svg",
-          "contextualTitle": "CodeChecker"
+          "contextualTitle": "CodeChecker",
+          "when": "codechecker.hasWorkspace"
         }
       ]
     },
@@ -412,7 +414,8 @@
   },
   "dependencies": {
     "shell-quote": "^1.8.1",
-    "tslib": "^2.6.2"
+    "tslib": "^2.6.2",
+    "yarn": "^1.22.22"
   },
-  "packageManager": "yarn@4.1.0"
+  "packageManager": "yarn@4.18.0"
 }

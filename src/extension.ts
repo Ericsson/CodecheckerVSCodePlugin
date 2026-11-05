@@ -10,9 +10,18 @@ export interface CodeCheckerExtension {
     editor: typeof Editor
 }
 
-export async function activate(context: vscode.ExtensionContext): Promise<CodeCheckerExtension> {
+export async function activate(context: vscode.ExtensionContext): Promise<CodeCheckerExtension | undefined> {
     // Backend must be initialized before the frontend
+    const hasWorkspace = !!vscode.workspace.workspaceFolders;
+    vscode.commands.executeCommand(
+        'setContext',
+        'codechecker.hasWorkspace',
+        hasWorkspace
+    );
 
+    if (vscode.workspace.name === undefined) {
+        return;
+    }
     if (await checkWorkspace()) {
         ExtensionApi.init(context);
         Editor.init(context);

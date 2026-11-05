@@ -13,9 +13,11 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true
   },
+  "include": ["src"],
   "exclude": [
-    "node_modules",
+    "node_modules/**",
     ".vscode-test"
   ]
 }

@@ -60,6 +60,8 @@ export class ScheduledProcess implements Disposable {
         ]);
     };
 
+    public callback: () => void = () => {};
+
     public readonly executable: string;
     public readonly commandArgs: string[];
 
@@ -232,6 +234,7 @@ export class ScheduledProcess implements Disposable {
                 return;
             } else if (type !== ProcessStatusType.finished) {
                 this._processStatusChange.fire({ type });
+                this.callback?.();
                 return;
             }
 
@@ -346,8 +349,11 @@ export class ExecutorManager implements Disposable {
     /** Add scheduled process to the queue, based on processName.
      * 'append' (default) moves to the end, 'replace' replaces the entire queue, 'prepend' moves to the front.
      */
-    public addToQueue(process: ScheduledProcess, method?: 'append' | 'replace' | 'prepend') {
+    public addToQueue(process: ScheduledProcess, method?: 'append' | 'replace' | 'prepend', callback?: () => void) {
         const name = process.processParameters.processType!;
+        if (callback !== undefined) {
+            process.callback = callback;
+        }
         let namedQueue = this.queue.get(name) ?? [];
 
         // When adding the same process as the currently running one, assume that its underlying data was changed,
